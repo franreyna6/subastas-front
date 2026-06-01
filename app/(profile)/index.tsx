@@ -33,17 +33,17 @@ export default function ProfileScreen() {
         {/* Grilla de Estadísticas */}
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>24</Text>
+            <Text style={styles.statValue}>9</Text>
             <Text style={styles.statLabel}>SUBASTAS</Text>
           </View>
 
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>7</Text>
+            <Text style={styles.statValue}>3</Text>
             <Text style={styles.statLabel}>GANADAS</Text>
           </View>
 
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>$340K</Text>
+            <Text style={styles.statValue}>$1.358K</Text>
             <Text style={styles.statLabel}>TOTAL PUJADO</Text>
           </View>
 

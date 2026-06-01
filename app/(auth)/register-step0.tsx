@@ -5,10 +5,13 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '@/constants/theme';
 
-export default function RegisterStep1Screen() {
+export default function RegisterStep0Screen() {
   const router = useRouter();
-  const [address, setAddress] = useState('');
-  const [country, setCountry] = useState('');
+  const [nombre, setNombre] = useState('');
+  const [apellido, setApellido] = useState('');
+  const [email, setEmail] = useState('');
+  const [telefono, setTelefono] = useState('');
+  const [dni, setDni] = useState('');
 
   return (
     <SafeAreaView style={styles.container}>
@@ -23,55 +26,81 @@ export default function RegisterStep1Screen() {
 
         {/* Indicadores de Paso */}
         <View style={styles.stepIndicatorContainer}>
-          <View style={[styles.stepPill, { backgroundColor: '#00FF00' }]} />
-          <View style={[styles.stepPill, { backgroundColor: '#FF3333' }]} />
+          <View style={[styles.stepPill, { backgroundColor: Colors.dark.primary }]} />
+          <View style={[styles.stepPill, { backgroundColor: Colors.dark.backgroundSelected }]} />
           <View style={[styles.stepPill, { backgroundColor: Colors.dark.backgroundSelected }]} />
         </View>
 
         {/* Título de Paso */}
-        <Text style={styles.stepTitle}>PASO 2 - DOCUMENTACION</Text>
+        <Text style={styles.stepTitle}>PASO 1 - DATOS PERSONALES</Text>
 
         {/* Formulario */}
         <View style={styles.form}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>DOMICILIO LEGAL</Text>
+            <Text style={styles.label}>NOMBRE</Text>
             <TextInput
               style={styles.input}
-              placeholder="Av. Corrientes 1234, CABA"
+              placeholder="Juan"
               placeholderTextColor={Colors.dark.textSecondary}
-              value={address}
-              onChangeText={setAddress}
+              value={nombre}
+              onChangeText={setNombre}
+              autoCapitalize="words"
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>PAÍS DE ORIGEN</Text>
+            <Text style={styles.label}>APELLIDO</Text>
             <TextInput
               style={styles.input}
-              placeholder="Argentina"
+              placeholder="Pérez"
               placeholderTextColor={Colors.dark.textSecondary}
-              value={country}
-              onChangeText={setCountry}
+              value={apellido}
+              onChangeText={setApellido}
+              autoCapitalize="words"
             />
           </View>
 
-          {/* Carga de Fotos DNI */}
-          <Text style={styles.label}>FOTO DEL DNI</Text>
-          
-          <TouchableOpacity style={styles.photoUploadBox}>
-            <Ionicons name="camera-outline" size={32} color={Colors.dark.textSecondary} />
-            <Text style={styles.photoUploadText}>Frente del documento</Text>
-          </TouchableOpacity>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>EMAIL</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="usuario@email.com"
+              placeholderTextColor={Colors.dark.textSecondary}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
 
-          <TouchableOpacity style={styles.photoUploadBox}>
-            <Ionicons name="camera-outline" size={32} color={Colors.dark.textSecondary} />
-            <Text style={styles.photoUploadText}>Dorso del documento</Text>
-          </TouchableOpacity>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>TELÉFONO</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="+54 11 1234-5678"
+              placeholderTextColor={Colors.dark.textSecondary}
+              value={telefono}
+              onChangeText={setTelefono}
+              keyboardType="phone-pad"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>NÚMERO DE DNI</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="12345678"
+              placeholderTextColor={Colors.dark.textSecondary}
+              value={dni}
+              onChangeText={setDni}
+              keyboardType="numeric"
+            />
+          </View>
 
           {/* Botón Continuar */}
-          <TouchableOpacity 
-            style={styles.button} 
-            onPress={() => router.push('/(auth)/register-step2')}
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => router.push('/(auth)/register-step1')}
           >
             <Text style={styles.buttonText}>CONTINUAR</Text>
           </TouchableOpacity>
@@ -146,23 +175,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     color: Colors.dark.text,
     fontSize: 15,
-  },
-  photoUploadBox: {
-    width: '100%',
-    height: 100,
-    backgroundColor: Colors.dark.backgroundElement,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'transparent',
-    borderStyle: 'dashed',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: Spacing.one,
-    marginBottom: Spacing.two,
-  },
-  photoUploadText: {
-    color: Colors.dark.textSecondary,
-    fontSize: 13,
   },
   button: {
     width: '100%',
