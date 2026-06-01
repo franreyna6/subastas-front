@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '@/constants/theme';
 
-export default function RegisterStep2Screen() {
+export default function RegisterStep3Screen() {
   const router = useRouter();
-  const [address, setAddress] = useState('');
-  const [country, setCountry] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <View style={styles.content}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -23,60 +23,49 @@ export default function RegisterStep2Screen() {
 
         {/* Indicadores de Paso */}
         <View style={styles.stepIndicatorContainer}>
-          <View style={[styles.stepPill, { backgroundColor: '#00FF00' }]} /> {/* Paso 1 completado */}
-          <View style={[styles.stepPill, { backgroundColor: '#FF3333' }]} /> {/* Paso 2 activo */}
-          <View style={[styles.stepPill, { backgroundColor: Colors.dark.backgroundSelected }]} /> {/* Paso 3 pendiente */}
+          <View style={[styles.stepPill, { backgroundColor: '#00FF00' }]} />
+          <View style={[styles.stepPill, { backgroundColor: '#00FF00' }]} />
+          <View style={[styles.stepPill, { backgroundColor: '#FF3333' }]} />
         </View>
 
         {/* Título de Paso */}
-        <Text style={styles.stepTitle}>PASO 2 - DOCUMENTACION</Text>
+        <Text style={styles.stepTitle}>PASO 3 - CREACIÓN DE CLAVE</Text>
 
         {/* Formulario */}
         <View style={styles.form}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>DOMICILIO LEGAL</Text>
+            <Text style={styles.label}>CONTRASEÑA PERSONAL</Text>
             <TextInput
               style={styles.input}
-              placeholder="Av. Corrientes 1234, CABA"
+              placeholder="••••••••"
               placeholderTextColor={Colors.dark.textSecondary}
-              value={address}
-              onChangeText={setAddress}
+              secureTextEntry
+              value={password}
+              onChangeText={setPassword}
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>PAÍS DE ORIGEN</Text>
+            <Text style={styles.label}>CONFIRMAR CONTRASEÑA</Text>
             <TextInput
               style={styles.input}
-              placeholder="Argentina"
+              placeholder="••••••••"
               placeholderTextColor={Colors.dark.textSecondary}
-              value={country}
-              onChangeText={setCountry}
+              secureTextEntry
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
             />
           </View>
 
-          {/* Carga de Fotos DNI */}
-          <Text style={styles.label}>FOTO DEL DNI</Text>
-          
-          <TouchableOpacity style={styles.photoUploadBox}>
-            <Ionicons name="camera-outline" size={32} color={Colors.dark.textSecondary} />
-            <Text style={styles.photoUploadText}>Frente del documento</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.photoUploadBox}>
-            <Ionicons name="camera-outline" size={32} color={Colors.dark.textSecondary} />
-            <Text style={styles.photoUploadText}>Dorso del documento</Text>
-          </TouchableOpacity>
-
-          {/* Botón Continuar */}
+          {/* Botón Finalizar */}
           <TouchableOpacity 
             style={styles.button} 
-            onPress={() => router.push('/(auth)/register-step3')}
+            onPress={() => router.replace('/(auth)/login')}
           >
-            <Text style={styles.buttonText}>CONTINUAR</Text>
+            <Text style={styles.buttonText}>FINALIZAR REGISTRO</Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -86,9 +75,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.dark.background,
   },
-  scrollContent: {
+  content: {
+    flex: 1,
     paddingHorizontal: Spacing.five,
-    paddingBottom: Spacing.five,
   },
   header: {
     flexDirection: 'row',
@@ -126,6 +115,7 @@ const styles = StyleSheet.create({
   form: {
     width: '100%',
     gap: Spacing.four,
+    marginTop: Spacing.two,
   },
   inputGroup: {
     width: '100%',
@@ -136,7 +126,6 @@ const styles = StyleSheet.create({
     color: Colors.dark.textSecondary,
     fontWeight: '600',
     letterSpacing: 1.5,
-    marginTop: Spacing.one,
   },
   input: {
     width: '100%',
@@ -147,23 +136,6 @@ const styles = StyleSheet.create({
     color: Colors.dark.text,
     fontSize: 15,
   },
-  photoUploadBox: {
-    width: '100%',
-    height: 100,
-    backgroundColor: Colors.dark.backgroundElement,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'transparent',
-    borderStyle: 'dashed',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: Spacing.one,
-    marginBottom: Spacing.two,
-  },
-  photoUploadText: {
-    color: Colors.dark.textSecondary,
-    fontSize: 13,
-  },
   button: {
     width: '100%',
     height: 52,
@@ -171,7 +143,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: Spacing.four,
+    marginTop: Spacing.five,
   },
   buttonText: {
     color: '#FFFFFF',

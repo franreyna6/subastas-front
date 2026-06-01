@@ -79,7 +79,10 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={20} color={Colors.dark.textSecondary} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => router.push('/(profile)/fines')}
+          >
             <Text style={styles.menuItemText}>Multas y bloqueos</Text>
             <Ionicons name="chevron-forward" size={20} color={Colors.dark.textSecondary} />
           </TouchableOpacity>

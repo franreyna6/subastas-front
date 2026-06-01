@@ -7,8 +7,10 @@ import { Colors, Spacing } from '@/constants/theme';
 
 export default function RegisterStep1Screen() {
   const router = useRouter();
-  const [address, setAddress] = useState('');
-  const [country, setCountry] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [documentNumber, setDocumentNumber] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
 
   return (
     <SafeAreaView style={styles.container}>
@@ -23,50 +25,63 @@ export default function RegisterStep1Screen() {
 
         {/* Indicadores de Paso */}
         <View style={styles.stepIndicatorContainer}>
-          <View style={[styles.stepPill, { backgroundColor: '#00FF00' }]} /> {/* Paso 1 completado */}
-          <View style={[styles.stepPill, { backgroundColor: '#FF3333' }]} /> {/* Paso 2 activo */}
+          <View style={[styles.stepPill, { backgroundColor: '#FF3333' }]} /> {/* Paso 1 activo */}
+          <View style={[styles.stepPill, { backgroundColor: Colors.dark.backgroundSelected }]} /> {/* Paso 2 pendiente */}
           <View style={[styles.stepPill, { backgroundColor: Colors.dark.backgroundSelected }]} /> {/* Paso 3 pendiente */}
         </View>
 
         {/* Título de Paso */}
-        <Text style={styles.stepTitle}>PASO 2 - DOCUMENTACION</Text>
+        <Text style={styles.stepTitle}>PASO 1 - DATOS PERSONALES</Text>
 
         {/* Formulario */}
         <View style={styles.form}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>DOMICILIO LEGAL</Text>
+            <Text style={styles.label}>NOMBRE Y APELLIDO</Text>
             <TextInput
               style={styles.input}
-              placeholder="Av. Corrientes 1234, CABA"
+              placeholder="Juan Pérez"
               placeholderTextColor={Colors.dark.textSecondary}
-              value={address}
-              onChangeText={setAddress}
+              value={fullName}
+              onChangeText={setFullName}
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>PAÍS DE ORIGEN</Text>
+            <Text style={styles.label}>DNI / CUIL / CUIT</Text>
             <TextInput
               style={styles.input}
-              placeholder="Argentina"
+              placeholder="20-12345678-9"
               placeholderTextColor={Colors.dark.textSecondary}
-              value={country}
-              onChangeText={setCountry}
+              value={documentNumber}
+              onChangeText={setDocumentNumber}
+              keyboardType="numeric"
             />
           </View>
 
-          {/* Carga de Fotos DNI */}
-          <Text style={styles.label}>FOTO DEL DNI</Text>
-          
-          <TouchableOpacity style={styles.photoUploadBox}>
-            <Ionicons name="camera-outline" size={32} color={Colors.dark.textSecondary} />
-            <Text style={styles.photoUploadText}>Frente del documento</Text>
-          </TouchableOpacity>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>CORREO ELECTRÓNICO</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="usuario@email.com"
+              placeholderTextColor={Colors.dark.textSecondary}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
 
-          <TouchableOpacity style={styles.photoUploadBox}>
-            <Ionicons name="camera-outline" size={32} color={Colors.dark.textSecondary} />
-            <Text style={styles.photoUploadText}>Dorso del documento</Text>
-          </TouchableOpacity>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>TELÉFONO DE CONTACTO</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="11 1234 5678"
+              placeholderTextColor={Colors.dark.textSecondary}
+              value={phone}
+              onChangeText={setPhone}
+              keyboardType="phone-pad"
+            />
+          </View>
 
           {/* Botón Continuar */}
           <TouchableOpacity 
@@ -146,23 +161,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     color: Colors.dark.text,
     fontSize: 15,
-  },
-  photoUploadBox: {
-    width: '100%',
-    height: 100,
-    backgroundColor: Colors.dark.backgroundElement,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'transparent',
-    borderStyle: 'dashed',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: Spacing.one,
-    marginBottom: Spacing.two,
-  },
-  photoUploadText: {
-    color: Colors.dark.textSecondary,
-    fontSize: 13,
   },
   button: {
     width: '100%',

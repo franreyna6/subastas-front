@@ -92,7 +92,7 @@ export default function LiveRoomScreen() {
 
         {/* Título del artículo */}
         <View style={styles.detailsContainer}>
-          <Text style={styles.itemTitle}>Óleo sobre tela - "Amanecer"</Text>
+          <Text style={styles.itemTitle}>Óleo sobre tela - {"\"Amanecer\""}</Text>
           <Text style={styles.itemMetadata}>Autor: J. Miralles - 1978 - Pieza 07 de 14</Text>
         </View>
 
