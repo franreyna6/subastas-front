@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView, Alert } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,10 +12,7 @@ export default function RegisterStep1Screen() {
   const [country, setCountry] = useState('Argentina');
 
   const handleContinue = () => {
-    if (!address.trim() || !country.trim()) {
-      Alert.alert('Campos requeridos', 'Por favor completá domicilio y país.');
-      return;
-    }
+    // Bypass de validación para permitir la navegación directa durante pruebas
     registrationStore.set({ address, country });
     router.push('/(auth)/register-step2');
   };

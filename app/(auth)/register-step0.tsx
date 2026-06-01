@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView, Alert } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -102,10 +102,7 @@ export default function RegisterStep0Screen() {
           <TouchableOpacity
             style={styles.button}
             onPress={() => {
-              if (!nombre || !apellido || !email || !telefono || !dni) {
-                Alert.alert('Campos requeridos', 'Completá todos los campos para continuar.');
-                return;
-              }
+              // Bypass de validación para permitir la navegación directa durante pruebas
               registrationStore.set({ nombre, apellido, email, telefono, dni });
               router.push('/(auth)/register-step1');
             }}
