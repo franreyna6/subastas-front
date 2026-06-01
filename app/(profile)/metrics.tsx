@@ -149,6 +149,9 @@ export default function MetricsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.push('/(buyer)/dashboard')} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Métricas e Historial</Text>
       </View>
 
@@ -253,10 +256,14 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.dark.background,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.three,
     backgroundColor: '#0F182F',
-    alignItems: 'center',
+  },
+  backButton: {
+    marginRight: Spacing.three,
   },
   headerTitle: {
     fontSize: 18,

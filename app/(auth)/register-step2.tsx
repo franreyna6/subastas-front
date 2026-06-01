@@ -1,14 +1,70 @@
 import React, { useState } from 'react';
+<<<<<<< Updated upstream
 import { StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
+=======
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator, Alert } from 'react-native';
+>>>>>>> Stashed changes
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '@/constants/theme';
+import { authService } from '@/lib/services/auth.service';
+import { registrationStore } from '@/lib/store/registrationStore';
 
 export default function RegisterStep2Screen() {
   const router = useRouter();
+<<<<<<< Updated upstream
   const [address, setAddress] = useState('');
   const [country, setCountry] = useState('');
+=======
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleRegister = async () => {
+    if (!password || !confirmPassword) {
+      Alert.alert('Error', 'Completá ambas contraseñas.');
+      return;
+    }
+    if (password.length < 6) {
+      Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Las contraseñas no coinciden.');
+      return;
+    }
+
+    const regData = registrationStore.get();
+    if (!regData.email) {
+      Alert.alert('Error', 'Faltan datos del registro. Volvé al inicio.');
+      router.replace('/(auth)/register-step0');
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await authService.signUp(regData.email, password, {
+      full_name: `${regData.nombre} ${regData.apellido}`,
+      phone: regData.telefono ?? '',
+      dni: regData.dni ?? '',
+      address: regData.address ?? '',
+      country: regData.country ?? 'Argentina',
+    });
+    setLoading(false);
+
+    if (error) {
+      Alert.alert('Error al registrarse', error.message);
+      return;
+    }
+
+    registrationStore.clear();
+    Alert.alert(
+      '¡Registro exitoso!',
+      'Revisá tu email para confirmar tu cuenta, luego ingresá.',
+      [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }],
+    );
+  };
+>>>>>>> Stashed changes
 
   return (
     <SafeAreaView style={styles.container}>
@@ -23,9 +79,15 @@ export default function RegisterStep2Screen() {
 
         {/* Indicadores de Paso */}
         <View style={styles.stepIndicatorContainer}>
+<<<<<<< Updated upstream
           <View style={[styles.stepPill, { backgroundColor: '#00FF00' }]} /> {/* Paso 1 completado */}
           <View style={[styles.stepPill, { backgroundColor: '#FF3333' }]} /> {/* Paso 2 activo */}
           <View style={[styles.stepPill, { backgroundColor: Colors.dark.backgroundSelected }]} /> {/* Paso 3 pendiente */}
+=======
+          <View style={[styles.stepPill, { backgroundColor: Colors.dark.success }]} />
+          <View style={[styles.stepPill, { backgroundColor: Colors.dark.success }]} />
+          <View style={[styles.stepPill, { backgroundColor: Colors.dark.primary }]} />
+>>>>>>> Stashed changes
         </View>
 
         {/* Título de Paso */}
@@ -39,8 +101,15 @@ export default function RegisterStep2Screen() {
               style={styles.input}
               placeholder="Av. Corrientes 1234, CABA"
               placeholderTextColor={Colors.dark.textSecondary}
+<<<<<<< Updated upstream
               value={address}
               onChangeText={setAddress}
+=======
+              secureTextEntry
+              value={password}
+              onChangeText={setPassword}
+              autoCapitalize="none"
+>>>>>>> Stashed changes
             />
           </View>
 
@@ -50,6 +119,7 @@ export default function RegisterStep2Screen() {
               style={styles.input}
               placeholder="Argentina"
               placeholderTextColor={Colors.dark.textSecondary}
+<<<<<<< Updated upstream
               value={country}
               onChangeText={setCountry}
             />
@@ -74,6 +144,25 @@ export default function RegisterStep2Screen() {
             onPress={() => router.push('/(auth)/register-step3')}
           >
             <Text style={styles.buttonText}>CONTINUAR</Text>
+=======
+              secureTextEntry
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              autoCapitalize="none"
+            />
+          </View>
+
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handleRegister}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.buttonText}>FINALIZAR REGISTRO</Text>
+            )}
+>>>>>>> Stashed changes
           </TouchableOpacity>
         </View>
       </ScrollView>

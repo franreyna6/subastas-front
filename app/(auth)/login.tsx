@@ -1,30 +1,65 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
+import * as AuthSession from 'expo-auth-session';
 import { Colors, Spacing } from '@/constants/theme';
+import { supabase } from '@/lib/supabase';
+import { authService } from '@/lib/services/auth.service';
+
+WebBrowser.maybeCompleteAuthSession();
+
+type OAuthProvider = 'google' | 'apple' | 'facebook';
 
 export default function LoginScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [socialLoading, setSocialLoading] = useState<OAuthProvider | null>(null);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Completá email y contraseña.');
+      return;
+    }
     setLoading(true);
-    // Simular inicio de sesión
-    setTimeout(() => {
-      setLoading(false);
-      // Redirigir al dashboard (comprador)
-      router.replace('/(buyer)/dashboard');
-    }, 1000);
+    const { error } = await authService.signIn(email, password);
+    setLoading(false);
+    if (error) {
+      Alert.alert('Error al ingresar', error.message);
+      return;
+    }
+    router.replace('/(buyer)/dashboard');
+  };
+
+  const handleOAuthLogin = async (provider: OAuthProvider) => {
+    setSocialLoading(provider);
+    try {
+      const redirectUrl = AuthSession.makeRedirectUri({ scheme: 'subastas' });
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: redirectUrl, skipBrowserRedirect: true },
+      });
+      if (error || !data.url) return;
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+      if (result.type === 'success' && result.url) {
+        const { error: sessionError } = await supabase.auth.exchangeCodeForSession(result.url);
+        if (!sessionError) router.replace('/(buyer)/dashboard');
+      }
+    } catch (e) {
+      console.error('OAuth error:', e);
+    } finally {
+      setSocialLoading(null);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        {/* Icono de Gavel (Martillo) */}
+        {/* Logo */}
         <View style={styles.logoContainer}>
           <View style={styles.iconBackground}>
             <Ionicons name="hammer-sharp" size={48} color={Colors.dark.primary} />
@@ -44,6 +79,7 @@ export default function LoginScreen() {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              autoCorrect={false}
             />
           </View>
 
@@ -60,9 +96,8 @@ export default function LoginScreen() {
             />
           </View>
 
-          {/* Botón Ingresar */}
-          <TouchableOpacity 
-            style={styles.button} 
+          <TouchableOpacity
+            style={styles.button}
             onPress={handleLogin}
             disabled={loading}
           >
@@ -71,6 +106,55 @@ export default function LoginScreen() {
             ) : (
               <Text style={styles.buttonText}>INGRESAR</Text>
             )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Separador */}
+        <View style={styles.separator}>
+          <View style={styles.separatorLine} />
+          <Text style={styles.separatorText}>O CONTINUAR CON</Text>
+          <View style={styles.separatorLine} />
+        </View>
+
+        {/* Botones sociales */}
+        <View style={styles.socialButtons}>
+          <TouchableOpacity
+            style={styles.socialButton}
+            onPress={() => handleOAuthLogin('google')}
+            disabled={socialLoading !== null}
+          >
+            {socialLoading === 'google' ? (
+              <ActivityIndicator size="small" color={Colors.dark.text} />
+            ) : (
+              <FontAwesome5 name="google" size={20} color="#EA4335" />
+            )}
+            <Text style={styles.socialButtonText}>Google</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.socialButton}
+            onPress={() => handleOAuthLogin('apple')}
+            disabled={socialLoading !== null}
+          >
+            {socialLoading === 'apple' ? (
+              <ActivityIndicator size="small" color={Colors.dark.text} />
+            ) : (
+              <FontAwesome5 name="apple" size={22} color={Colors.dark.text} />
+            )}
+            <Text style={styles.socialButtonText}>Apple</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.socialButton}
+            onPress={() => handleOAuthLogin('facebook')}
+            disabled={socialLoading !== null}
+          >
+            {socialLoading === 'facebook' ? (
+              <ActivityIndicator size="small" color={Colors.dark.text} />
+            ) : (
+              <FontAwesome5 name="facebook" size={20} color="#1877F2" />
+            )}
+            <Text style={styles.socialButtonText}>Facebook</Text>
           </TouchableOpacity>
         </View>
 
@@ -158,6 +242,44 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     letterSpacing: 1,
+  },
+  separator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    marginTop: Spacing.five,
+    gap: Spacing.two,
+  },
+  separatorLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.dark.backgroundElement,
+  },
+  separatorText: {
+    fontSize: 11,
+    color: Colors.dark.textSecondary,
+    fontWeight: '600',
+    letterSpacing: 1.2,
+  },
+  socialButtons: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: Spacing.two,
+    marginTop: Spacing.four,
+  },
+  socialButton: {
+    flex: 1,
+    height: 52,
+    backgroundColor: Colors.dark.backgroundElement,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.one,
+  },
+  socialButtonText: {
+    color: Colors.dark.text,
+    fontSize: 12,
+    fontWeight: '600',
   },
   footer: {
     marginTop: Spacing.five,

@@ -1,16 +1,22 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '@/constants/theme';
+import { registrationStore } from '@/lib/store/registrationStore';
 
 export default function RegisterStep1Screen() {
   const router = useRouter();
+<<<<<<< Updated upstream
   const [fullName, setFullName] = useState('');
   const [documentNumber, setDocumentNumber] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+=======
+  const [address, setAddress] = useState('');
+  const [country, setCountry] = useState('Argentina');
+>>>>>>> Stashed changes
 
   return (
     <SafeAreaView style={styles.container}>
@@ -84,9 +90,16 @@ export default function RegisterStep1Screen() {
           </View>
 
           {/* Botón Continuar */}
-          <TouchableOpacity 
-            style={styles.button} 
-            onPress={() => router.push('/(auth)/register-step2')}
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => {
+              if (!address || !country) {
+                Alert.alert('Campos requeridos', 'Completá domicilio y país.');
+                return;
+              }
+              registrationStore.set({ address, country });
+              router.push('/(auth)/register-step2');
+            }}
           >
             <Text style={styles.buttonText}>CONTINUAR</Text>
           </TouchableOpacity>

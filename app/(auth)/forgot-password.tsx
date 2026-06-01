@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '@/constants/theme';
+import { authService } from '@/lib/services/auth.service';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -11,6 +12,7 @@ export default function ForgotPasswordScreen() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
+<<<<<<< Updated upstream
   const handleResetPassword = () => {
     if (!email) {
       Alert.alert('Error', 'Por favor ingresa tu correo electrónico');
@@ -23,6 +25,18 @@ export default function ForgotPasswordScreen() {
       setLoading(false);
       setSubmitted(true);
     }, 1500);
+=======
+  const handleSend = async () => {
+    if (!email) return;
+    setLoading(true);
+    const { error } = await authService.resetPassword(email);
+    setLoading(false);
+    if (error) {
+      Alert.alert('Error', error.message);
+      return;
+    }
+    setSent(true);
+>>>>>>> Stashed changes
   };
 
   return (
