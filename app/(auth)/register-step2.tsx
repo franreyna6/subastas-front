@@ -1,9 +1,5 @@
 import React, { useState } from 'react';
-<<<<<<< Updated upstream
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
-=======
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator, Alert } from 'react-native';
->>>>>>> Stashed changes
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,16 +9,12 @@ import { registrationStore } from '@/lib/store/registrationStore';
 
 export default function RegisterStep2Screen() {
   const router = useRouter();
-<<<<<<< Updated upstream
-  const [address, setAddress] = useState('');
-  const [country, setCountry] = useState('');
-=======
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    if (!password || !confirmPassword) {
+    if (!password.trim() || !confirmPassword.trim()) {
       Alert.alert('Error', 'Completá ambas contraseñas.');
       return;
     }
@@ -61,14 +53,13 @@ export default function RegisterStep2Screen() {
     Alert.alert(
       '¡Registro exitoso!',
       'Revisá tu email para confirmar tu cuenta, luego ingresá.',
-      [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }],
+      [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }]
     );
   };
->>>>>>> Stashed changes
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -79,72 +70,35 @@ export default function RegisterStep2Screen() {
 
         {/* Indicadores de Paso */}
         <View style={styles.stepIndicatorContainer}>
-<<<<<<< Updated upstream
-          <View style={[styles.stepPill, { backgroundColor: '#00FF00' }]} /> {/* Paso 1 completado */}
-          <View style={[styles.stepPill, { backgroundColor: '#FF3333' }]} /> {/* Paso 2 activo */}
-          <View style={[styles.stepPill, { backgroundColor: Colors.dark.backgroundSelected }]} /> {/* Paso 3 pendiente */}
-=======
-          <View style={[styles.stepPill, { backgroundColor: Colors.dark.success }]} />
-          <View style={[styles.stepPill, { backgroundColor: Colors.dark.success }]} />
-          <View style={[styles.stepPill, { backgroundColor: Colors.dark.primary }]} />
->>>>>>> Stashed changes
+          <View style={[styles.stepPill, { backgroundColor: Colors.dark.success }]} /> {/* Paso 1 completado */}
+          <View style={[styles.stepPill, { backgroundColor: Colors.dark.success }]} /> {/* Paso 2 completado */}
+          <View style={[styles.stepPill, { backgroundColor: Colors.dark.primary }]} /> {/* Paso 3 activo */}
         </View>
 
         {/* Título de Paso */}
-        <Text style={styles.stepTitle}>PASO 2 - DOCUMENTACION</Text>
+        <Text style={styles.stepTitle}>PASO 3 - CREACIÓN DE CLAVE</Text>
 
         {/* Formulario */}
         <View style={styles.form}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>DOMICILIO LEGAL</Text>
+            <Text style={styles.label}>CONTRASEÑA PERSONAL</Text>
             <TextInput
               style={styles.input}
-              placeholder="Av. Corrientes 1234, CABA"
+              placeholder="••••••••"
               placeholderTextColor={Colors.dark.textSecondary}
-<<<<<<< Updated upstream
-              value={address}
-              onChangeText={setAddress}
-=======
               secureTextEntry
               value={password}
               onChangeText={setPassword}
               autoCapitalize="none"
->>>>>>> Stashed changes
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>PAÍS DE ORIGEN</Text>
+            <Text style={styles.label}>CONFIRMAR CONTRASEÑA</Text>
             <TextInput
               style={styles.input}
-              placeholder="Argentina"
+              placeholder="••••••••"
               placeholderTextColor={Colors.dark.textSecondary}
-<<<<<<< Updated upstream
-              value={country}
-              onChangeText={setCountry}
-            />
-          </View>
-
-          {/* Carga de Fotos DNI */}
-          <Text style={styles.label}>FOTO DEL DNI</Text>
-          
-          <TouchableOpacity style={styles.photoUploadBox}>
-            <Ionicons name="camera-outline" size={32} color={Colors.dark.textSecondary} />
-            <Text style={styles.photoUploadText}>Frente del documento</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.photoUploadBox}>
-            <Ionicons name="camera-outline" size={32} color={Colors.dark.textSecondary} />
-            <Text style={styles.photoUploadText}>Dorso del documento</Text>
-          </TouchableOpacity>
-
-          {/* Botón Continuar */}
-          <TouchableOpacity 
-            style={styles.button} 
-            onPress={() => router.push('/(auth)/register-step3')}
-          >
-            <Text style={styles.buttonText}>CONTINUAR</Text>
-=======
               secureTextEntry
               value={confirmPassword}
               onChangeText={setConfirmPassword}
@@ -152,6 +106,7 @@ export default function RegisterStep2Screen() {
             />
           </View>
 
+          {/* Botón Finalizar */}
           <TouchableOpacity
             style={styles.button}
             onPress={handleRegister}
@@ -162,7 +117,6 @@ export default function RegisterStep2Screen() {
             ) : (
               <Text style={styles.buttonText}>FINALIZAR REGISTRO</Text>
             )}
->>>>>>> Stashed changes
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -236,23 +190,6 @@ const styles = StyleSheet.create({
     color: Colors.dark.text,
     fontSize: 15,
   },
-  photoUploadBox: {
-    width: '100%',
-    height: 100,
-    backgroundColor: Colors.dark.backgroundElement,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'transparent',
-    borderStyle: 'dashed',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: Spacing.one,
-    marginBottom: Spacing.two,
-  },
-  photoUploadText: {
-    color: Colors.dark.textSecondary,
-    fontSize: 13,
-  },
   button: {
     width: '100%',
     height: 52,
@@ -260,7 +197,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: Spacing.four,
+    marginTop: Spacing.five,
   },
   buttonText: {
     color: '#FFFFFF',

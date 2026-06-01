@@ -12,31 +12,22 @@ export default function ForgotPasswordScreen() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-<<<<<<< Updated upstream
-  const handleResetPassword = () => {
+  const handleResetPassword = async () => {
     if (!email) {
       Alert.alert('Error', 'Por favor ingresa tu correo electrónico');
       return;
     }
     
     setLoading(true);
-    // Simular envío de correo de recuperación
-    setTimeout(() => {
-      setLoading(false);
-      setSubmitted(true);
-    }, 1500);
-=======
-  const handleSend = async () => {
-    if (!email) return;
-    setLoading(true);
     const { error } = await authService.resetPassword(email);
     setLoading(false);
+
     if (error) {
       Alert.alert('Error', error.message);
       return;
     }
-    setSent(true);
->>>>>>> Stashed changes
+
+    setSubmitted(true);
   };
 
   return (

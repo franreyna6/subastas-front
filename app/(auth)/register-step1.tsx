@@ -8,19 +8,21 @@ import { registrationStore } from '@/lib/store/registrationStore';
 
 export default function RegisterStep1Screen() {
   const router = useRouter();
-<<<<<<< Updated upstream
-  const [fullName, setFullName] = useState('');
-  const [documentNumber, setDocumentNumber] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-=======
   const [address, setAddress] = useState('');
   const [country, setCountry] = useState('Argentina');
->>>>>>> Stashed changes
+
+  const handleContinue = () => {
+    if (!address.trim() || !country.trim()) {
+      Alert.alert('Campos requeridos', 'Por favor completá domicilio y país.');
+      return;
+    }
+    registrationStore.set({ address, country });
+    router.push('/(auth)/register-step2');
+  };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -31,75 +33,55 @@ export default function RegisterStep1Screen() {
 
         {/* Indicadores de Paso */}
         <View style={styles.stepIndicatorContainer}>
-          <View style={[styles.stepPill, { backgroundColor: '#FF3333' }]} /> {/* Paso 1 activo */}
-          <View style={[styles.stepPill, { backgroundColor: Colors.dark.backgroundSelected }]} /> {/* Paso 2 pendiente */}
+          <View style={[styles.stepPill, { backgroundColor: Colors.dark.success }]} /> {/* Paso 1 completado */}
+          <View style={[styles.stepPill, { backgroundColor: Colors.dark.primary }]} /> {/* Paso 2 activo */}
           <View style={[styles.stepPill, { backgroundColor: Colors.dark.backgroundSelected }]} /> {/* Paso 3 pendiente */}
         </View>
 
         {/* Título de Paso */}
-        <Text style={styles.stepTitle}>PASO 1 - DATOS PERSONALES</Text>
+        <Text style={styles.stepTitle}>PASO 2 - DOMICILIO</Text>
 
         {/* Formulario */}
         <View style={styles.form}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>NOMBRE Y APELLIDO</Text>
+            <Text style={styles.label}>DOMICILIO LEGAL</Text>
             <TextInput
               style={styles.input}
-              placeholder="Juan Pérez"
+              placeholder="Av. Corrientes 1234, CABA"
               placeholderTextColor={Colors.dark.textSecondary}
-              value={fullName}
-              onChangeText={setFullName}
+              value={address}
+              onChangeText={setAddress}
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>DNI / CUIL / CUIT</Text>
+            <Text style={styles.label}>PAÍS DE ORIGEN</Text>
             <TextInput
               style={styles.input}
-              placeholder="20-12345678-9"
+              placeholder="Argentina"
               placeholderTextColor={Colors.dark.textSecondary}
-              value={documentNumber}
-              onChangeText={setDocumentNumber}
-              keyboardType="numeric"
+              value={country}
+              onChangeText={setCountry}
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>CORREO ELECTRÓNICO</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="usuario@email.com"
-              placeholderTextColor={Colors.dark.textSecondary}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-          </View>
+          {/* Carga de Fotos DNI */}
+          <Text style={styles.label}>FOTO DEL DNI</Text>
+          
+          <TouchableOpacity style={styles.photoUploadBox}>
+            <Ionicons name="camera-outline" size={32} color={Colors.dark.textSecondary} />
+            <Text style={styles.photoUploadText}>Frente del documento</Text>
+          </TouchableOpacity>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>TELÉFONO DE CONTACTO</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="11 1234 5678"
-              placeholderTextColor={Colors.dark.textSecondary}
-              value={phone}
-              onChangeText={setPhone}
-              keyboardType="phone-pad"
-            />
-          </View>
+          <TouchableOpacity style={styles.photoUploadBox}>
+            <Ionicons name="camera-outline" size={32} color={Colors.dark.textSecondary} />
+            <Text style={styles.photoUploadText}>Dorso del documento</Text>
+          </TouchableOpacity>
 
           {/* Botón Continuar */}
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => {
-              if (!address || !country) {
-                Alert.alert('Campos requeridos', 'Completá domicilio y país.');
-                return;
-              }
-              registrationStore.set({ address, country });
-              router.push('/(auth)/register-step2');
-            }}
+          <TouchableOpacity 
+            style={styles.button} 
+            onPress={handleContinue}
           >
             <Text style={styles.buttonText}>CONTINUAR</Text>
           </TouchableOpacity>
@@ -174,6 +156,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     color: Colors.dark.text,
     fontSize: 15,
+  },
+  photoUploadBox: {
+    width: '100%',
+    height: 100,
+    backgroundColor: Colors.dark.backgroundElement,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: Spacing.one,
+    marginBottom: Spacing.two,
+  },
+  photoUploadText: {
+    color: Colors.dark.textSecondary,
+    fontSize: 13,
   },
   button: {
     width: '100%',
