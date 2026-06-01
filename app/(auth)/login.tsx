@@ -76,7 +76,7 @@ export default function LoginScreen() {
 
         {/* Enlaces */}
         <View style={styles.footer}>
-          <TouchableOpacity onPress={() => router.push('/(auth)/register-step1')}>
+          <TouchableOpacity onPress={() => router.push('/(auth)/register-step0')}>
             <Text style={styles.footerText}>
               ¿No tenés cuenta? <Text style={styles.linkText}>Registrate</Text>
             </Text>
