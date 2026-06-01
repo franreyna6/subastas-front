@@ -136,8 +136,8 @@ export default function MetricsScreen() {
   const visibleHistory = filteredHistory.slice(0, visibleCount);
   const hasMore = visibleCount < filteredHistory.length;
 
-  const totalBid = useMemo(
-    () => HISTORY.reduce((sum, item) => sum + parseBid(item.myBid), 0),
+  const totalSpent = useMemo(
+    () => HISTORY.filter(item => item.status === 'GANADA').reduce((sum, item) => sum + parseBid(item.myBid), 0),
     [],
   );
 
@@ -159,8 +159,8 @@ export default function MetricsScreen() {
         {/* Resumen */}
         <View style={styles.summaryBox}>
           <Text style={styles.summaryTitle}>Resumen Financiero</Text>
-          <Text style={styles.totalAmount}>{formatTotal(totalBid)}</Text>
-          <Text style={styles.summarySubtitle}>Monto Total Ofertado en la Plataforma</Text>
+          <Text style={styles.totalAmount}>{formatTotal(totalSpent)}</Text>
+          <Text style={styles.summarySubtitle}>Monto Total Gastado (Subastas Ganadas)</Text>
         </View>
 
         {/* Historial */}

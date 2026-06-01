@@ -43,8 +43,8 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>$1.358K</Text>
-            <Text style={styles.statLabel}>TOTAL PUJADO</Text>
+            <Text style={styles.statValue}>$274K</Text>
+            <Text style={styles.statLabel}>TOTAL GASTADO</Text>
           </View>
 
           <View style={styles.statCard}>
