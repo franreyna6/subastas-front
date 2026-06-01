@@ -9,7 +9,7 @@ interface AuctionHistory {
   id: string;
   name: string;
   date: string;
-  status: 'GANADA' | 'PARTICIPÓ' | 'PERDIDA';
+  status: 'GANADA' | 'PARTICIPÓ';
   finalPrice: string;
   myBid: string;
   image: string;
@@ -47,7 +47,7 @@ const HISTORY: AuctionHistory[] = [
     id: '4',
     name: 'Joyas de Época',
     date: '18/04/2026',
-    status: 'PERDIDA',
+    status: 'PARTICIPÓ',
     finalPrice: '$ 210.000',
     myBid: '$ 195.000',
     image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=600&auto=format&fit=crop',
@@ -74,7 +74,7 @@ const HISTORY: AuctionHistory[] = [
     id: '7',
     name: 'Fotografía Documental',
     date: '10/03/2026',
-    status: 'PERDIDA',
+    status: 'PARTICIPÓ',
     finalPrice: '$ 55.000',
     myBid: '$ 48.000',
     image: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=600&auto=format&fit=crop',
@@ -101,19 +101,17 @@ const HISTORY: AuctionHistory[] = [
 
 const PAGE_SIZE = 6;
 
-type Filter = 'TODAS' | 'GANADA' | 'PERDIDA' | 'PARTICIPÓ';
+type Filter = 'TODAS' | 'GANADA' | 'MAYORES';
 
 const FILTERS: { label: string; value: Filter }[] = [
   { label: 'Todas', value: 'TODAS' },
   { label: 'Ganadas', value: 'GANADA' },
-  { label: 'Perdidas', value: 'PERDIDA' },
-  { label: 'Participó', value: 'PARTICIPÓ' },
+  { label: '+$200.000', value: 'MAYORES' },
 ];
 
 const STATUS_COLOR: Record<AuctionHistory['status'], string> = {
   GANADA: Colors.dark.success,
   PARTICIPÓ: Colors.dark.textSecondary,
-  PERDIDA: Colors.dark.primary,
 };
 
 function parseBid(bid: string): number {
@@ -129,9 +127,11 @@ export default function MetricsScreen() {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [activeFilter, setActiveFilter] = useState<Filter>('TODAS');
 
-  const filteredHistory = activeFilter === 'TODAS'
-    ? HISTORY
-    : HISTORY.filter(item => item.status === activeFilter);
+  const filteredHistory = useMemo(() => {
+    if (activeFilter === 'GANADA') return HISTORY.filter(i => i.status === 'GANADA');
+    if (activeFilter === 'MAYORES') return HISTORY.filter(i => parseBid(i.myBid) > 200000);
+    return HISTORY;
+  }, [activeFilter]);
 
   const visibleHistory = filteredHistory.slice(0, visibleCount);
   const hasMore = visibleCount < filteredHistory.length;
