@@ -6,6 +6,8 @@ export type RegistrationData = {
   dni: string;
   address: string;
   country: string;
+  fotoDniFrente: string;
+  fotoDniDorso: string;
 };
 
 let _data: Partial<RegistrationData> = {};

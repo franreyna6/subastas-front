@@ -4,12 +4,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '@/constants/theme';
+import { authApi } from '@/lib/api/auth.api';
 
 export default function ProfileScreen() {
   const router = useRouter();
 
-  const handleLogout = () => {
-    // Volver a login
+  const handleLogout = async () => {
+    await authApi.logout();
     router.replace('/(auth)/login');
   };
 

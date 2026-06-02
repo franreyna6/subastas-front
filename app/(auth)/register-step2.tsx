@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '@/constants/theme';
-import { authService } from '@/lib/services/auth.service';
+import { authApi } from '@/lib/api/auth.api';
 import { registrationStore } from '@/lib/store/registrationStore';
 
 export default function RegisterStep2Screen() {
@@ -14,18 +14,14 @@ export default function RegisterStep2Screen() {
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    // Si los campos están vacíos, simulamos el registro directo
-    if (!password.trim() || !confirmPassword.trim()) {
-      setLoading(true);
-      setTimeout(() => {
-        setLoading(false);
-        registrationStore.clear();
-        Alert.alert(
-          'Registro Simulado',
-          'Registro completado con éxito en modo de prueba.',
-          [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }]
-        );
-      }, 1000);
+    // Bypass: si ambos campos vacíos → modo prueba
+    if (!password.trim() && !confirmPassword.trim()) {
+      registrationStore.clear();
+      Alert.alert(
+        'Registro Simulado',
+        'Registro completado en modo de prueba.',
+        [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }],
+      );
       return;
     }
 
@@ -39,59 +35,39 @@ export default function RegisterStep2Screen() {
     }
 
     const regData = registrationStore.get();
-    if (!regData.email) {
+    if (!regData.email || !regData.nombre || !regData.dni) {
       Alert.alert('Error', 'Faltan datos del registro. Volvé al inicio.');
       router.replace('/(auth)/register-step0');
       return;
     }
 
     setLoading(true);
-    try {
-      const { error } = await authService.signUp(regData.email, password, {
-        full_name: `${regData.nombre} ${regData.apellido}`,
-        phone: regData.telefono ?? '',
-        dni: regData.dni ?? '',
-        address: regData.address ?? '',
-        country: regData.country ?? 'Argentina',
-      });
-      setLoading(false);
+    const { error } = await authApi.register({
+      nombre: `${regData.nombre} ${regData.apellido ?? ''}`.trim(),
+      documento: regData.dni,
+      direccion: regData.address,
+      email: regData.email,
+      password,
+      rol: 'cliente',
+    });
+    setLoading(false);
 
-      if (error) {
-        // Fallback a simulación si la API key es inválida o falla la conexión
-        if (error.message.includes('API key') || error.message.includes('apiKey') || error.message.includes('fetch')) {
-          registrationStore.clear();
-          Alert.alert(
-            'Registro Simulado',
-            'Supabase no configurado. Registro simulado con éxito en modo de prueba.',
-            [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }]
-          );
-          return;
-        }
-        Alert.alert('Error al registrarse', error.message);
-        return;
-      }
-
-      registrationStore.clear();
-      Alert.alert(
-        '¡Registro exitoso!',
-        'Revisá tu email para confirmar tu cuenta, luego ingresá.',
-        [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }]
-      );
-    } catch {
-      setLoading(false);
-      registrationStore.clear();
-      Alert.alert(
-        'Registro Simulado',
-        'Registro simulado con éxito en modo de prueba.',
-        [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }]
-      );
+    if (error) {
+      Alert.alert('Error al registrarse', error);
+      return;
     }
+
+    registrationStore.clear();
+    Alert.alert(
+      '¡Registro enviado!',
+      'Tu solicitud fue recibida. Un empleado debe aprobarla antes de que puedas ingresar.',
+      [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }],
+    );
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
@@ -99,17 +75,14 @@ export default function RegisterStep2Screen() {
           <Text style={styles.headerTitle}>Registrate</Text>
         </View>
 
-        {/* Indicadores de Paso */}
         <View style={styles.stepIndicatorContainer}>
-          <View style={[styles.stepPill, { backgroundColor: Colors.dark.success }]} /> {/* Paso 1 completado */}
-          <View style={[styles.stepPill, { backgroundColor: Colors.dark.success }]} /> {/* Paso 2 completado */}
-          <View style={[styles.stepPill, { backgroundColor: Colors.dark.primary }]} /> {/* Paso 3 activo */}
+          <View style={[styles.stepPill, { backgroundColor: Colors.dark.success }]} />
+          <View style={[styles.stepPill, { backgroundColor: Colors.dark.success }]} />
+          <View style={[styles.stepPill, { backgroundColor: Colors.dark.primary }]} />
         </View>
 
-        {/* Título de Paso */}
         <Text style={styles.stepTitle}>PASO 3 - CREACIÓN DE CLAVE</Text>
 
-        {/* Formulario */}
         <View style={styles.form}>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>CONTRASEÑA PERSONAL</Text>
@@ -137,12 +110,7 @@ export default function RegisterStep2Screen() {
             />
           </View>
 
-          {/* Botón Finalizar */}
-          <TouchableOpacity
-            style={styles.button}
-            onPress={handleRegister}
-            disabled={loading}
-          >
+          <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}>
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
@@ -156,84 +124,18 @@ export default function RegisterStep2Screen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.dark.background,
-  },
-  scrollContent: {
-    paddingHorizontal: Spacing.five,
-    paddingBottom: Spacing.five,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: Spacing.three,
-    marginBottom: Spacing.three,
-  },
-  backButton: {
-    marginRight: Spacing.three,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  stepIndicatorContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: Spacing.two,
-    marginBottom: Spacing.five,
-  },
-  stepPill: {
-    flex: 1,
-    height: 10,
-    borderRadius: 5,
-  },
-  stepTitle: {
-    fontSize: 12,
-    color: Colors.dark.textSecondary,
-    fontWeight: '700',
-    textAlign: 'center',
-    letterSpacing: 1.5,
-    marginBottom: Spacing.four,
-  },
-  form: {
-    width: '100%',
-    gap: Spacing.four,
-  },
-  inputGroup: {
-    width: '100%',
-    gap: Spacing.two,
-  },
-  label: {
-    fontSize: 12,
-    color: Colors.dark.textSecondary,
-    fontWeight: '600',
-    letterSpacing: 1.5,
-    marginTop: Spacing.one,
-  },
-  input: {
-    width: '100%',
-    height: 52,
-    backgroundColor: Colors.dark.backgroundElement,
-    borderRadius: 8,
-    paddingHorizontal: Spacing.three,
-    color: Colors.dark.text,
-    fontSize: 15,
-  },
-  button: {
-    width: '100%',
-    height: 52,
-    backgroundColor: Colors.dark.primary,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: Spacing.five,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-  },
+  container: { flex: 1, backgroundColor: Colors.dark.background },
+  scrollContent: { paddingHorizontal: Spacing.five, paddingBottom: Spacing.five },
+  header: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.three, marginBottom: Spacing.three },
+  backButton: { marginRight: Spacing.three },
+  headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#FFFFFF' },
+  stepIndicatorContainer: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.two, marginBottom: Spacing.five },
+  stepPill: { flex: 1, height: 10, borderRadius: 5 },
+  stepTitle: { fontSize: 12, color: Colors.dark.textSecondary, fontWeight: '700', textAlign: 'center', letterSpacing: 1.5, marginBottom: Spacing.four },
+  form: { width: '100%', gap: Spacing.four },
+  inputGroup: { width: '100%', gap: Spacing.two },
+  label: { fontSize: 12, color: Colors.dark.textSecondary, fontWeight: '600', letterSpacing: 1.5, marginTop: Spacing.one },
+  input: { width: '100%', height: 52, backgroundColor: Colors.dark.backgroundElement, borderRadius: 8, paddingHorizontal: Spacing.three, color: Colors.dark.text, fontSize: 15 },
+  button: { width: '100%', height: 52, backgroundColor: Colors.dark.primary, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginTop: Spacing.four },
+  buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold', letterSpacing: 1 },
 });
