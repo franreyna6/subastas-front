@@ -9,6 +9,7 @@ import { pagosApi } from '@/lib/api/pagos.api';
 import { api } from '@/lib/api/apiClient';
 import { authStore } from '@/lib/store/authStore';
 import { MOCK_PAGOS, MOCK_STATS } from '@/lib/mock/mockData';
+import CategoryInfoModal from '@/components/CategoryInfoModal';
 
 interface Perfil {
   nombre: string;
@@ -31,10 +32,11 @@ function formatMoney(n: number) {
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const [perfil, setPerfil]       = useState<Perfil | null>(null);
-  const [stats, setStats]         = useState<Stats | null>(null);
+  const [perfil, setPerfil]         = useState<Perfil | null>(null);
+  const [stats, setStats]           = useState<Stats | null>(null);
   const [totalPagos, setTotalPagos] = useState(0);
-  const [loading, setLoading]     = useState(true);
+  const [loading, setLoading]       = useState(true);
+  const [showCatModal, setShowCatModal] = useState(false);
 
   const load = useCallback(async () => {
     const sesion = await authStore.get();
@@ -85,9 +87,10 @@ export default function ProfileScreen() {
               <Text style={styles.profileName}>{perfil?.nombre?.toUpperCase() ?? ''}</Text>
               <Text style={styles.profileEmail}>{perfil?.email ?? ''}</Text>
               {perfil?.categoria && (
-                <View style={styles.categoryBadge}>
+                <TouchableOpacity style={styles.categoryBadge} onPress={() => setShowCatModal(true)}>
                   <Text style={styles.categoryBadgeText}>CATEGORÍA {perfil.categoria.toUpperCase()}</Text>
-                </View>
+                  <Ionicons name="information-circle-outline" size={14} color="#A2B0C4" style={{ marginLeft: 4 }} />
+                </TouchableOpacity>
               )}
             </View>
 
@@ -168,6 +171,14 @@ export default function ProfileScreen() {
           <Text style={[styles.navText, { color: Colors.dark.primary }]}>PERFIL</Text>
         </TouchableOpacity>
       </View>
+
+      {showCatModal && perfil?.categoria && (
+        <CategoryInfoModal
+          categoria={perfil.categoria}
+          visible={showCatModal}
+          onClose={() => setShowCatModal(false)}
+        />
+      )}
     </SafeAreaView>
   );
 }

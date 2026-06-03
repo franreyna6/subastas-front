@@ -1,324 +1,413 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, Image, Alert } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  StyleSheet, Text, View, TextInput, TouchableOpacity,
+  ScrollView, Alert, ActivityIndicator, Image, Dimensions,
+  NativeSyntheticEvent, NativeScrollEvent,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '@/constants/theme';
+import { authStore } from '@/lib/store/authStore';
+import { subastasApi, ItemActual } from '@/lib/api/subastas.api';
+import { puedeParticipar, CATEGORIA_COLOR } from '@/lib/utils/categoria';
+import CategoryInfoModal from '@/components/CategoryInfoModal';
 
-interface Bid {
-  id: string;
-  bidder: string;
-  amount: number;
-  isMe: boolean;
+const { width: SCREEN_W } = Dimensions.get('window');
+const POLL_MS = 3000;
+
+// Imágenes placeholder hasta que se implemente el upload por item
+const PLACEHOLDER_IMAGES = [
+  'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=800&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1561214115-f2f134cc4912?q=80&w=800&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=800&auto=format&fit=crop',
+];
+
+function Carousel({ images }: { images: string[] }) {
+  const [page, setPage] = useState(0);
+
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const newPage = Math.round(e.nativeEvent.contentOffset.x / SCREEN_W);
+    setPage(newPage);
+  };
+
+  return (
+    <View>
+      <ScrollView
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={onScroll}
+      >
+        {images.map((uri, i) => (
+          <Image key={i} source={{ uri }} style={styles.carouselImage} />
+        ))}
+      </ScrollView>
+      {images.length > 1 && (
+        <View style={styles.dotsRow}>
+          {images.map((_, i) => (
+            <View key={i} style={[styles.dot, i === page && styles.dotActive]} />
+          ))}
+        </View>
+      )}
+    </View>
+  );
 }
 
 export default function LiveRoomScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const auctionName = params.name ? String(params.name) : 'Colección Arte Moderno';
+  const subastaId        = Number(params.id ?? 0);
+  const auctionName      = params.name      ? String(params.name)      : 'Subasta';
+  const categoriaSubasta = params.categoria ? String(params.categoria) : 'comun';
 
-  // Valores base y de ofertas
-  const basePrice = 80000;
-  const [highestBid, setHighestBid] = useState(125000);
+  const [userCategoria, setUserCategoria] = useState<string | undefined>(undefined);
+  const [showCatModal, setShowCatModal]   = useState(false);
+
+  const [loading, setLoading]             = useState(true);
+  const [joining, setJoining]             = useState(false);
+  const [joinError, setJoinError]         = useState<string | null>(null);
+  const [numeropostor, setNumeropostor]   = useState<number | null>(null);
+  const [puedePublicar, setPuedePublicar] = useState(false);
+
+  const [subastaEstado, setSubastaEstado] = useState<string>('abierta');
+  const [totalItems, setTotalItems]       = useState(0);
+  const [itemActual, setItemActual]       = useState<ItemActual | null>(null);
+
   const [bidValue, setBidValue] = useState('');
-  
-  // Lista de ofertas iniciales
-  const [bids, setBids] = useState<Bid[]>([
-    { id: '1', bidder: 'Vos', amount: 125000, isMe: true },
-    { id: '2', bidder: 'postor_42', amount: 123500, isMe: false },
-    { id: '3', bidder: 'maría_v', amount: 121000, isMe: false },
-  ]);
+  const [pujando, setPujando]   = useState(false);
 
-  // Límites según reglas de negocio (min +1% base, max +20% base)
-  const minRequiredBid = highestBid + (basePrice * 0.01);
-  const maxAllowedBid = highestBid + (basePrice * 0.20);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const prevItemId = useRef<number | null>(null);
+  const bloqueado  = userCategoria !== undefined && !puedeParticipar(userCategoria, categoriaSubasta);
 
-  const handlePlaceBid = () => {
-    const numBid = parseFloat(bidValue.replace(/[^0-9.]/g, ''));
-    
-    if (isNaN(numBid)) {
-      Alert.alert('Error', 'Por favor ingresa un monto válido.');
-      return;
+  useEffect(() => {
+    authStore.get().then(s => setUserCategoria(s?.categoria));
+  }, []);
+
+  useEffect(() => {
+    if (!subastaId) return;
+    setJoining(true);
+    subastasApi.unirse(subastaId).then(res => {
+      if (res.error) setJoinError(res.error);
+      else if (res.data) {
+        setNumeropostor(res.data.numeropostor);
+        setPuedePublicar(res.data.puedePublicar);
+      }
+      setJoining(false);
+    });
+  }, [subastaId]);
+
+  const fetchEstado = useCallback(async () => {
+    if (!subastaId) return;
+    const res = await subastasApi.estado(subastaId);
+    if (res.data) {
+      setSubastaEstado(res.data.estado);
+      setTotalItems(res.data.totalItems);
+      // Limpiar input si cambió el item
+      if (res.data.itemActual?.itemId !== prevItemId.current) {
+        setBidValue('');
+        prevItemId.current = res.data.itemActual?.itemId ?? null;
+      }
+      setItemActual(res.data.itemActual);
     }
+    setLoading(false);
+  }, [subastaId]);
 
-    if (numBid < minRequiredBid) {
-      Alert.alert(
-        'Oferta Inválida', 
-        `La oferta mínima debe ser de $${minRequiredBid.toLocaleString()} (Oferta actual + 1% del valor base).`
-      );
-      return;
-    }
+  useEffect(() => {
+    fetchEstado();
+    pollingRef.current = setInterval(fetchEstado, POLL_MS);
+    return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
+  }, [fetchEstado]);
 
-    if (numBid > maxAllowedBid) {
-      Alert.alert(
-        'Oferta Excesiva', 
-        `La oferta máxima permitida es de $${maxAllowedBid.toLocaleString()} (Oferta actual + 20% del valor base).`
-      );
-      return;
-    }
+  const categoriaEsSinLimites = ['oro', 'platino'].includes(categoriaSubasta.toLowerCase());
+  const base    = itemActual?.precioBase ?? 0;
+  const mejor   = itemActual?.mejorOferta ?? base;
+  const minPuja = mejor + base * 0.01;
+  const maxPuja = mejor + base * 0.20;
 
-    // Agregar nueva oferta
-    const newBid: Bid = {
-      id: Date.now().toString(),
-      bidder: 'Vos',
-      amount: numBid,
-      isMe: true
-    };
+  const handlePlaceBid = async () => {
+    if (!itemActual) return;
+    const num = parseFloat(bidValue.replace(/[^0-9.]/g, ''));
+    if (isNaN(num)) { Alert.alert('Error', 'Ingresá un monto válido.'); return; }
 
-    setHighestBid(numBid);
-    setBids([newBid, ...bids.map(b => b.bidder === 'Vos' ? { ...b, bidder: 'Vos (anterior)', isMe: false } : b)]);
+    setPujando(true);
+    const res = await subastasApi.pujar(subastaId, itemActual.itemId, num);
+    setPujando(false);
+
+    if (res.error) { Alert.alert('Puja rechazada', res.error); return; }
     setBidValue('');
-    Alert.alert('¡Éxito!', `Has ofertado $${numBid.toLocaleString()} correctamente.`);
+    fetchEstado();
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          {auctionName}
-        </Text>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Imagen del bien activo */}
-        <Image 
-          source={{ uri: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=600&auto=format&fit=crop' }} 
-          style={styles.itemImage} 
-        />
-
-        {/* Título del artículo */}
-        <View style={styles.detailsContainer}>
-          <Text style={styles.itemTitle}>Óleo sobre tela - {"\"Amanecer\""}</Text>
-          <Text style={styles.itemMetadata}>Autor: J. Miralles - 1978 - Pieza 07 de 14</Text>
-        </View>
-
-        {/* Cajas de Precio */}
-        <View style={styles.priceRow}>
-          <View style={styles.priceCol}>
-            <Text style={styles.priceLabel}>MEJOR OFERTA</Text>
-            <Text style={styles.priceValue}>$ {highestBid.toLocaleString()}</Text>
-          </View>
-          <View style={styles.priceCol}>
-            <Text style={styles.priceLabel}>BASE</Text>
-            <Text style={[styles.priceValue, { color: '#FFFFFF' }]}>$ {basePrice.toLocaleString()}</Text>
-          </View>
-        </View>
-
-        {/* Límites de oferta */}
-        <Text style={styles.limitLabel}>
-          Puja mín: ${minRequiredBid.toLocaleString()} - máx: ${maxAllowedBid.toLocaleString()}
-        </Text>
-
-        {/* Input de Puja */}
-        <View style={styles.bidInputSection}>
-          <TextInput
-            style={styles.bidInput}
-            placeholder={`$ ${(minRequiredBid).toFixed(0)}`}
-            placeholderTextColor={Colors.dark.textSecondary}
-            keyboardType="numeric"
-            value={bidValue}
-            onChangeText={setBidValue}
-          />
-          <TouchableOpacity style={styles.bidButton} onPress={handlePlaceBid}>
-            <Text style={styles.bidButtonText}>PUJAR</Text>
+  // ── Error join ─────────────────────────────────────────────────────────────
+  if (joinError) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <SimpleHeader title={auctionName} onBack={() => router.back()} />
+        <View style={styles.centered}>
+          <Ionicons name="warning-outline" size={52} color="#F59E0B" />
+          <Text style={styles.statusTitle}>No se puede unir</Text>
+          <Text style={styles.statusMsg}>{joinError}</Text>
+          <TouchableOpacity style={styles.pill} onPress={() => router.back()}>
+            <Text style={styles.pillText}>VOLVER</Text>
           </TouchableOpacity>
         </View>
+      </SafeAreaView>
+    );
+  }
 
-        {/* Historial de ofertas */}
-        <View style={styles.historySection}>
-          <Text style={styles.historyTitle}>ÚLTIMAS OFERTAS</Text>
-          
-          <View style={styles.bidsList}>
-            {bids.map((bid) => (
-              <View key={bid.id} style={styles.bidItem}>
-                <View style={styles.bidderContainer}>
-                  {bid.isMe && <View style={styles.myBidDot} />}
-                  <Text style={[styles.bidderName, bid.isMe && styles.myBidText]}>
-                    {bid.bidder}
-                  </Text>
-                </View>
-                <Text style={[styles.bidAmount, bid.isMe && styles.myBidText]}>
-                  ${bid.amount.toLocaleString()}
-                </Text>
-              </View>
-            ))}
+  // ── Loading ────────────────────────────────────────────────────────────────
+  if (loading || joining) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <SimpleHeader title={auctionName} onBack={() => router.back()} />
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={Colors.dark.primary} />
+          <Text style={styles.statusMsg}>{joining ? 'Uniéndose a la subasta...' : 'Cargando...'}</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Subasta finalizada ─────────────────────────────────────────────────────
+  if (!itemActual) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <SimpleHeader title={auctionName} onBack={() => router.back()} />
+        <View style={styles.centered}>
+          <Ionicons name="checkmark-circle" size={52} color={Colors.dark.success} />
+          <Text style={styles.statusTitle}>Subasta finalizada</Text>
+          <Text style={styles.statusMsg}>Todos los ítems fueron subastados.</Text>
+          <TouchableOpacity style={styles.pill} onPress={() => router.back()}>
+            <Text style={styles.pillText}>VOLVER</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Vista principal ────────────────────────────────────────────────────────
+  return (
+    <SafeAreaView style={styles.container}>
+      <SimpleHeader
+        title={auctionName}
+        onBack={() => router.back()}
+        right={
+          numeropostor !== null ? (
+            <View style={styles.postorBadge}>
+              <Text style={styles.postorText}>Postor #{numeropostor}</Text>
+            </View>
+          ) : undefined
+        }
+      />
+
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+
+        {/* Carrusel de imágenes */}
+        <Carousel images={PLACEHOLDER_IMAGES} />
+
+        {/* Título e info del ítem */}
+        <View style={styles.itemInfo}>
+          <Text style={styles.itemTitle} numberOfLines={2}>
+            {itemActual.descripcion || `Ítem #${itemActual.itemId}`}
+          </Text>
+          <Text style={styles.itemMeta}>
+            Pieza {itemActual.numero} de {totalItems}
+          </Text>
+        </View>
+
+        {/* Precios */}
+        <View style={styles.priceRow}>
+          <View>
+            <Text style={styles.priceLabel}>MEJOR OFERTA</Text>
+            <Text style={styles.bestBid}>
+              {itemActual.mejorOferta != null
+                ? `$ ${itemActual.mejorOferta.toLocaleString('es-AR')}`
+                : 'Sin ofertas'}
+            </Text>
+            {!categoriaEsSinLimites && (
+              <Text style={styles.limitText}>
+                Puja mín: ${Math.ceil(minPuja).toLocaleString('es-AR')} — máx: ${Math.ceil(maxPuja).toLocaleString('es-AR')}
+              </Text>
+            )}
+          </View>
+          <View style={styles.basePriceBox}>
+            <Text style={styles.priceLabel}>BASE</Text>
+            <Text style={styles.baseAmount}>$ {base.toLocaleString('es-AR')}</Text>
           </View>
         </View>
 
-        {/* Botón Ver en vivo */}
-        <TouchableOpacity style={styles.liveStreamButton}>
-          <Text style={styles.liveStreamButtonText}>VER EN VIVO</Text>
+        {/* Zona de puja */}
+        {bloqueado ? (
+          <TouchableOpacity style={styles.alertBox} onPress={() => setShowCatModal(true)} activeOpacity={0.85}>
+            <Ionicons name="lock-closed" size={22} color="#EF4444" />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.alertTitle}>CATEGORÍA INSUFICIENTE</Text>
+              <Text style={styles.alertMsg}>
+                Esta subasta requiere categoría{' '}
+                <Text style={{ color: CATEGORIA_COLOR[categoriaSubasta] ?? '#fff', fontWeight: 'bold' }}>
+                  {categoriaSubasta.toUpperCase()}
+                </Text>
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={Colors.dark.textSecondary} />
+          </TouchableOpacity>
+        ) : !puedePublicar ? (
+          <TouchableOpacity
+            style={[styles.alertBox, { borderColor: 'rgba(245,158,11,0.4)', backgroundColor: 'rgba(245,158,11,0.07)' }]}
+            onPress={() => router.push('/(profile)/payments')}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="card-outline" size={22} color="#F59E0B" />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.alertTitle, { color: '#F59E0B' }]}>SIN MEDIO DE PAGO</Text>
+              <Text style={styles.alertMsg}>Registrá un medio de pago para pujar</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={Colors.dark.textSecondary} />
+          </TouchableOpacity>
+        ) : subastaEstado !== 'abierta' ? (
+          <View style={styles.closedBox}>
+            <Text style={styles.alertMsg}>La subasta está cerrada</Text>
+          </View>
+        ) : (
+          <View style={styles.bidRow}>
+            <TextInput
+              style={styles.bidInput}
+              placeholder={`$ ${Math.ceil(minPuja).toLocaleString('es-AR')}`}
+              placeholderTextColor={Colors.dark.textSecondary}
+              keyboardType="numeric"
+              value={bidValue}
+              onChangeText={setBidValue}
+              editable={!pujando}
+            />
+            <TouchableOpacity
+              style={[styles.bidBtn, pujando && { opacity: 0.6 }]}
+              onPress={handlePlaceBid}
+              disabled={pujando}
+            >
+              {pujando
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Text style={styles.bidBtnText}>PUJAR</Text>}
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Últimas ofertas */}
+        {itemActual.pujos.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>ÚLTIMAS OFERTAS</Text>
+            <View style={styles.bidList}>
+              {itemActual.pujos.map((p, idx) => {
+                const esYo = p.numPostor === numeropostor;
+                const isLast = idx === itemActual.pujos.length - 1;
+                return (
+                  <View key={idx} style={[styles.bidRow2, !isLast && styles.bidSep]}>
+                    <View style={styles.bidderLeft}>
+                      {esYo && <View style={styles.dot2} />}
+                      <Text style={[styles.bidderName, esYo && styles.meText]}>
+                        {esYo ? 'Vos' : `postor_${p.numPostor}`}
+                      </Text>
+                    </View>
+                    <Text style={[styles.bidAmount, esYo && styles.meText]}>
+                      ${p.importe.toLocaleString('es-AR')}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {/* VER EN VIVO */}
+        <TouchableOpacity style={styles.liveBtn}>
+          <Text style={styles.liveBtnText}>VER EN VIVO</Text>
         </TouchableOpacity>
+
       </ScrollView>
+
+      {showCatModal && userCategoria && (
+        <CategoryInfoModal
+          categoria={userCategoria}
+          visible={showCatModal}
+          onClose={() => setShowCatModal(false)}
+        />
+      )}
     </SafeAreaView>
   );
 }
 
+function SimpleHeader({ title, onBack, right }: { title: string; onBack: () => void; right?: React.ReactNode }) {
+  return (
+    <View style={styles.header}>
+      <TouchableOpacity onPress={onBack} style={{ marginRight: Spacing.three }}>
+        <Ionicons name="arrow-back" size={24} color="#fff" />
+      </TouchableOpacity>
+      <Text style={styles.headerTitle} numberOfLines={1}>{title}</Text>
+      {right}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.dark.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.three,
-    backgroundColor: '#0F182F',
-  },
-  backButton: {
-    marginRight: Spacing.three,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: Spacing.five,
-  },
-  itemImage: {
-    width: '100%',
-    height: 220,
-    resizeMode: 'cover',
-  },
-  detailsContainer: {
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.three,
-    gap: 4,
-  },
-  itemTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  itemMetadata: {
-    fontSize: 13,
-    color: Colors.dark.textSecondary,
-  },
-  priceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.four,
-    marginTop: Spacing.two,
-  },
-  priceCol: {
-    flex: 1,
-    gap: 4,
-  },
-  priceLabel: {
-    fontSize: 11,
-    color: Colors.dark.textSecondary,
-    fontWeight: '600',
-    letterSpacing: 1,
-  },
-  priceValue: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#FFD700', // Dorado para mejor oferta
-  },
-  limitLabel: {
-    fontSize: 12,
-    color: Colors.dark.textSecondary,
-    paddingHorizontal: Spacing.four,
-    marginTop: Spacing.two,
-  },
-  bidInputSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: Spacing.four,
-    marginVertical: Spacing.four,
-    gap: Spacing.three,
-  },
-  bidInput: {
-    flex: 2,
-    height: 52,
-    backgroundColor: Colors.dark.backgroundElement,
-    borderRadius: 8,
-    paddingHorizontal: Spacing.three,
-    color: Colors.dark.text,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  bidButton: {
-    flex: 1.2,
-    height: 52,
-    backgroundColor: Colors.dark.primary,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  bidButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-  },
-  historySection: {
-    marginHorizontal: Spacing.four,
-    marginTop: Spacing.two,
-  },
-  historyTitle: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: Colors.dark.textSecondary,
-    letterSpacing: 1.5,
-    marginBottom: Spacing.two,
-  },
-  bidsList: {
-    backgroundColor: Colors.dark.backgroundElement,
-    borderRadius: 12,
-    paddingHorizontal: Spacing.three,
-  },
-  bidItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: Spacing.three,
-    borderBottomWidth: 1,
-    borderBottomColor: '#242F50',
-  },
-  bidderContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
-  myBidDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.dark.success,
-  },
-  bidderName: {
-    fontSize: 14,
-    color: Colors.dark.textSecondary,
-  },
-  bidAmount: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.dark.text,
-  },
-  myBidText: {
-    color: Colors.dark.success,
-    fontWeight: 'bold',
-  },
-  liveStreamButton: {
-    marginHorizontal: Spacing.four,
-    marginTop: Spacing.five,
-    height: 52,
-    backgroundColor: Colors.dark.primary,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  liveStreamButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-    letterSpacing: 1.5,
-  },
+  container:     { flex: 1, backgroundColor: Colors.dark.background },
+  centered:      { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.five, gap: 16 },
+  statusTitle:   { fontSize: 18, fontWeight: 'bold', color: '#fff', textAlign: 'center' },
+  statusMsg:     { fontSize: 14, color: Colors.dark.textSecondary, textAlign: 'center', lineHeight: 20 },
+  pill:          { backgroundColor: Colors.dark.primary, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 8 },
+  pillText:      { color: '#fff', fontWeight: 'bold', fontSize: 14 },
+
+  header:        { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.four, paddingVertical: Spacing.three, backgroundColor: '#0F182F' },
+  headerTitle:   { fontSize: 18, fontWeight: 'bold', color: '#fff', flex: 1 },
+  postorBadge:   { backgroundColor: Colors.dark.primary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  postorText:    { fontSize: 11, fontWeight: 'bold', color: '#fff' },
+
+  scrollContent: { paddingBottom: 40 },
+
+  // Carrusel
+  carouselImage: { width: SCREEN_W, height: 240, resizeMode: 'cover' },
+  dotsRow:       { flexDirection: 'row', justifyContent: 'center', gap: 6, paddingVertical: 10, backgroundColor: Colors.dark.background },
+  dot:           { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.dark.backgroundElement },
+  dotActive:     { backgroundColor: '#fff', width: 18 },
+
+  // Info item
+  itemInfo:      { paddingHorizontal: Spacing.four, paddingTop: Spacing.three, paddingBottom: Spacing.two },
+  itemTitle:     { fontSize: 20, fontWeight: 'bold', color: '#fff', lineHeight: 26 },
+  itemMeta:      { fontSize: 13, color: Colors.dark.textSecondary, marginTop: 4 },
+
+  // Precios
+  priceRow:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: Spacing.four, marginTop: Spacing.two },
+  priceLabel:    { fontSize: 11, color: Colors.dark.textSecondary, fontWeight: '600', letterSpacing: 1, marginBottom: 2 },
+  bestBid:       { fontSize: 28, fontWeight: 'bold', color: '#FFD700' },
+  limitText:     { fontSize: 12, color: Colors.dark.textSecondary, marginTop: 4 },
+  basePriceBox:  { alignItems: 'flex-end' },
+  baseAmount:    { fontSize: 22, fontWeight: 'bold', color: '#fff' },
+
+  // Zona de puja
+  bidRow:        { flexDirection: 'row', alignItems: 'center', marginHorizontal: Spacing.four, marginVertical: Spacing.four, gap: Spacing.three },
+  bidInput:      { flex: 2, height: 52, backgroundColor: Colors.dark.backgroundElement, borderRadius: 10, paddingHorizontal: Spacing.three, color: '#fff', fontSize: 16, fontWeight: '600' },
+  bidBtn:        { flex: 1.3, height: 52, backgroundColor: Colors.dark.primary, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  bidBtnText:    { color: '#fff', fontSize: 15, fontWeight: 'bold', letterSpacing: 1 },
+
+  // Alertas
+  alertBox:      { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: Spacing.four, marginVertical: Spacing.three, backgroundColor: 'rgba(239,68,68,0.08)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)', borderRadius: 12, padding: Spacing.three },
+  alertTitle:    { fontSize: 12, fontWeight: 'bold', color: '#EF4444', letterSpacing: 1 },
+  alertMsg:      { fontSize: 13, color: Colors.dark.textSecondary, marginTop: 2 },
+  closedBox:     { marginHorizontal: Spacing.four, marginVertical: Spacing.three, padding: Spacing.three, backgroundColor: Colors.dark.backgroundElement, borderRadius: 10, alignItems: 'center' },
+
+  // Historial
+  section:       { marginHorizontal: Spacing.four, marginTop: Spacing.three },
+  sectionTitle:  { fontSize: 11, fontWeight: 'bold', color: Colors.dark.textSecondary, letterSpacing: 1.5, marginBottom: Spacing.two },
+  bidList:       { backgroundColor: Colors.dark.backgroundElement, borderRadius: 12, paddingHorizontal: Spacing.three },
+  bidRow2:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14 },
+  bidSep:        { borderBottomWidth: 1, borderBottomColor: '#1E2A45' },
+  bidderLeft:    { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  dot2:          { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.dark.success },
+  bidderName:    { fontSize: 14, color: Colors.dark.textSecondary },
+  bidAmount:     { fontSize: 14, fontWeight: '600', color: '#FFD700' },
+  meText:        { color: Colors.dark.success, fontWeight: 'bold' },
+
+  // VER EN VIVO
+  liveBtn:       { marginHorizontal: Spacing.four, marginTop: 24, height: 52, backgroundColor: Colors.dark.primary, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  liveBtnText:   { color: '#fff', fontSize: 16, fontWeight: 'bold', letterSpacing: 1.5 },
 });

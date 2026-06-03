@@ -10,22 +10,8 @@ import { Colors, Spacing } from '@/constants/theme';
 import { subastasApi, SubastaResumen } from '@/lib/api/subastas.api';
 import { authStore } from '@/lib/store/authStore';
 import { MOCK_SUBASTAS } from '@/lib/mock/mockData';
-
-const CATEGORIA_COLOR: Record<string, string> = {
-  platino: '#A0522D',
-  oro:     '#B8860B',
-  plata:   '#708090',
-  especial:'#6A0DAD',
-  comun:   '#1A3A5C',
-};
-
-const CATEGORIA_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
-  platino: 'diamond-outline',
-  oro:     'car-sport-outline',
-  plata:   'color-palette-outline',
-  especial:'star-outline',
-  comun:   'pricetag-outline',
-};
+import { CATEGORIA_COLOR, CATEGORIA_ICON } from '@/lib/utils/categoria';
+import CategoryInfoModal from '@/components/CategoryInfoModal';
 
 function formatPrice(n: number) {
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
@@ -39,7 +25,7 @@ const TIPO_BADGE: Record<string, { label: string; color: string; textColor: stri
   cerrada: { label: 'CERRADA',  color: '#555',    textColor: '#FFF' },
 };
 
-function AuctionCard({ s, onPress }: { s: SubastaResumen; onPress?: () => void }) {
+function AuctionCard({ s, onPress, onCategoryPress }: { s: SubastaResumen; onPress?: () => void; onCategoryPress?: () => void }) {
   const badge = TIPO_BADGE[s.tipo];
   const isCerrada = s.tipo === 'cerrada';
   const Wrapper = onPress ? TouchableOpacity : View;
@@ -47,14 +33,21 @@ function AuctionCard({ s, onPress }: { s: SubastaResumen; onPress?: () => void }
   return (
     <Wrapper style={[styles.card, isCerrada && { opacity: 0.55 }]} onPress={onPress}>
       <View style={[styles.cardBanner, { backgroundColor: isCerrada ? '#2A2A3A' : (CATEGORIA_COLOR[s.categoria] ?? '#1A3A5C') }]}>
-        <Ionicons name={CATEGORIA_ICON[s.categoria] ?? 'pricetag-outline'} size={36} color="rgba(255,255,255,0.35)" />
+        <Ionicons name={(CATEGORIA_ICON[s.categoria] ?? 'pricetag-outline') as React.ComponentProps<typeof Ionicons>['name']} size={36} color="rgba(255,255,255,0.35)" />
         <View style={[styles.tipoBadge, { backgroundColor: badge.color }]}>
           <Text style={[styles.tipoBadgeText, { color: badge.textColor }]}>{badge.label}</Text>
         </View>
       </View>
       <View style={styles.cardInfo}>
         <Text style={styles.cardTitle} numberOfLines={1}>{s.descripcion || `Subasta #${s.id}`}</Text>
-        <Text style={styles.cardSubtitle}>{s.totalItems} ítems · Cat. {(s.categoria ?? '').toUpperCase()}</Text>
+        <View style={styles.cardSubtitleRow}>
+          <Text style={styles.cardSubtitle}>{s.totalItems} ítems · </Text>
+          <TouchableOpacity onPress={onCategoryPress} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={[styles.cardCatLabel, { color: CATEGORIA_COLOR[s.categoria] ?? Colors.dark.textSecondary }]}>
+              Cat. {(s.categoria ?? '').toUpperCase()}
+            </Text>
+          </TouchableOpacity>
+        </View>
         <View style={styles.cardFooter}>
           {!isCerrada && <Text style={styles.cardPrice}>desde {formatPrice(s.precioBaseMinimo)}</Text>}
           <Text style={styles.cardDate}>{s.fecha}  {s.hora?.slice(0, 5)}</Text>
@@ -70,8 +63,9 @@ export default function DashboardScreen() {
   const [loading, setLoading]   = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [query, setQuery]       = useState('');
-  const [nombre, setNombre]     = useState('');
+  const [nombre, setNombre]       = useState('');
   const [categoria, setCategoria] = useState('');
+  const [modalCat, setModalCat]   = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const sesion = await authStore.get();
@@ -110,9 +104,9 @@ export default function DashboardScreen() {
           <Text style={styles.userName}>{nombre || 'Usuario'}</Text>
         </View>
         {categoria ? (
-          <View style={styles.categoryBadge}>
+          <TouchableOpacity style={styles.categoryBadge} onPress={() => setModalCat(categoria)}>
             <Text style={styles.categoryBadgeText}>{categoria.toUpperCase()}</Text>
-          </View>
+          </TouchableOpacity>
         ) : null}
       </View>
 
@@ -157,7 +151,13 @@ export default function DashboardScreen() {
               {enVivo.length > 0 && (
                 <>
                   <Text style={styles.sectionTitle}>EN VIVO</Text>
-                  {enVivo.map(s => <AuctionCard key={s.id} s={s} onPress={() => router.push({ pathname: '/(buyer)/live-room', params: { id: s.id, name: s.descripcion } })} />)}
+                  {enVivo.map(s => (
+                    <AuctionCard
+                      key={s.id} s={s}
+                      onPress={() => router.push({ pathname: '/(buyer)/live-room', params: { id: s.id, name: s.descripcion, categoria: s.categoria } })}
+                      onCategoryPress={() => setModalCat(s.categoria)}
+                    />
+                  ))}
                 </>
               )}
 
@@ -165,7 +165,13 @@ export default function DashboardScreen() {
               {proximas.length > 0 && (
                 <>
                   <Text style={[styles.sectionTitle, enVivo.length > 0 && { marginTop: Spacing.four }]}>PRÓXIMAS</Text>
-                  {proximas.map(s => <AuctionCard key={s.id} s={s} onPress={() => router.push({ pathname: '/(buyer)/live-room', params: { id: s.id, name: s.descripcion } })} />)}
+                  {proximas.map(s => (
+                    <AuctionCard
+                      key={s.id} s={s}
+                      onPress={() => router.push({ pathname: '/(buyer)/live-room', params: { id: s.id, name: s.descripcion, categoria: s.categoria } })}
+                      onCategoryPress={() => setModalCat(s.categoria)}
+                    />
+                  ))}
                 </>
               )}
 
@@ -173,12 +179,22 @@ export default function DashboardScreen() {
               {cerradas.length > 0 && (
                 <>
                   <Text style={[styles.sectionTitle, { marginTop: Spacing.four }]}>CERRADAS</Text>
-                  {cerradas.map(s => <AuctionCard key={s.id} s={s} />)}
+                  {cerradas.map(s => (
+                    <AuctionCard key={s.id} s={s} onCategoryPress={() => setModalCat(s.categoria)} />
+                  ))}
                 </>
               )}
             </>
           )}
         </ScrollView>
+      )}
+
+      {modalCat && (
+        <CategoryInfoModal
+          categoria={modalCat}
+          visible={!!modalCat}
+          onClose={() => setModalCat(null)}
+        />
       )}
 
       <View style={styles.navBar}>
@@ -209,6 +225,8 @@ const styles = StyleSheet.create({
   userName:     { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF' },
   categoryBadge: { backgroundColor: '#A2B0C4', paddingHorizontal: Spacing.three, paddingVertical: Spacing.one, borderRadius: 16 },
   categoryBadgeText: { fontSize: 11, fontWeight: 'bold', color: '#111625' },
+  cardSubtitleRow: { flexDirection: 'row', alignItems: 'center' },
+  cardCatLabel: { fontSize: 12, fontWeight: '600' },
   searchSection: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: Colors.dark.backgroundElement,

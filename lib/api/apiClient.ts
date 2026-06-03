@@ -1,10 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
-// Android emulator → 10.0.2.2, iOS sim → localhost
+// Dispositivo físico → IP local de la máquina de desarrollo
 const BASE_URL = Platform.select({
-  android: 'http://10.0.2.2:8080',
-  default: 'http://localhost:8080',
+  android: 'http://192.168.1.9:8080',
+  default: 'http://192.168.1.9:8080',
 });
 
 export { BASE_URL };
