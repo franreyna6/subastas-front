@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '@/constants/theme';
 import { authApi } from '@/lib/api/auth.api';
+import { authStore, PRUEBA_SESSION } from '@/lib/store/authStore';
 import { socialStore, SocialProvider } from '@/lib/store/socialStore';
 
 export default function LoginScreen() {
@@ -15,6 +16,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (email.trim().toLowerCase() === 'prueba') {
+      await authStore.save(PRUEBA_SESSION);
       router.replace('/(buyer)/dashboard');
       return;
     }

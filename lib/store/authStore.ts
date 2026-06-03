@@ -7,7 +7,16 @@ export interface AuthSession {
   rol: Rol;
   userId: number;
   nombre: string;
+  categoria?: string;
 }
+
+export const PRUEBA_SESSION: AuthSession = {
+  token: '',
+  rol: 'cliente',
+  userId: 0,
+  nombre: 'Valentina Prueba',
+  categoria: 'platino',
+};
 
 export const authStore = {
   async save(session: AuthSession) {
@@ -23,5 +32,9 @@ export const authStore = {
   async clear() {
     await AsyncStorage.removeItem('auth_token');
     await AsyncStorage.removeItem('auth_session');
+  },
+
+  isPrueba(session: AuthSession | null): boolean {
+    return session?.userId === 0;
   },
 };
