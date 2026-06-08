@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet, Text, View, TextInput, ScrollView,
-  TouchableOpacity, ActivityIndicator, RefreshControl,
+  TouchableOpacity, ActivityIndicator, RefreshControl, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '@/constants/theme';
 import { subastasApi, SubastaResumen } from '@/lib/api/subastas.api';
@@ -30,10 +30,39 @@ function AuctionCard({ s, onPress, onCategoryPress }: { s: SubastaResumen; onPre
   const isCerrada = s.tipo === 'cerrada';
   const Wrapper = onPress ? TouchableOpacity : View;
 
+  const getIconName = (): React.ComponentProps<typeof Ionicons>['name'] => {
+    const desc = (s.descripcion || '').toLowerCase();
+    if (desc.includes('auto') || desc.includes('vehic') || desc.includes('coche')) {
+      return 'car-sport-outline';
+    }
+    if (desc.includes('arte') || desc.includes('pintur') || desc.includes('cuadro') || desc.includes('antigü')) {
+      return 'color-palette-outline';
+    }
+    if (desc.includes('reloj') || desc.includes('joya')) {
+      return 'watch-outline';
+    }
+    return 'pricetag-outline';
+  };
+
+  const iconName = getIconName();
+
+  const getBannerColor = (): string => {
+    switch (iconName) {
+      case 'car-sport-outline':
+        return '#2E4053'; // Slate blue metálico para autos
+      case 'color-palette-outline':
+        return '#5B2C6F'; // Violeta profundo para arte
+      case 'watch-outline':
+        return '#8A6D3B'; // Bronce/oro para relojes
+      default:
+        return '#1F3A52'; // Azul oscuro para general/otros
+    }
+  };
+
   return (
     <Wrapper style={[styles.card, isCerrada && { opacity: 0.55 }]} onPress={onPress}>
-      <View style={[styles.cardBanner, { backgroundColor: isCerrada ? '#2A2A3A' : (CATEGORIA_COLOR[s.categoria] ?? '#1A3A5C') }]}>
-        <Ionicons name={(CATEGORIA_ICON[s.categoria] ?? 'pricetag-outline') as React.ComponentProps<typeof Ionicons>['name']} size={36} color="rgba(255,255,255,0.35)" />
+      <View style={[styles.cardBanner, { backgroundColor: isCerrada ? '#2A2A3A' : getBannerColor() }]}>
+        <Ionicons name={iconName} size={36} color="rgba(255,255,255,0.35)" />
         <View style={[styles.tipoBadge, { backgroundColor: badge.color }]}>
           <Text style={[styles.tipoBadgeText, { color: badge.textColor }]}>{badge.label}</Text>
         </View>
@@ -78,13 +107,19 @@ export default function DashboardScreen() {
       setSubastas(MOCK_SUBASTAS);
     } else {
       const res = await subastasApi.listar();
-      setSubastas(res.data ?? []);
+      if (res.data) {
+        setSubastas(res.data);
+      }
     }
     setLoading(false);
     setRefreshing(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
 
   const filtered = subastas.filter(s =>
     !query.trim() ||
@@ -94,7 +129,14 @@ export default function DashboardScreen() {
 
   const enVivo  = filtered.filter(s => s.tipo === 'en_vivo');
   const proximas = filtered.filter(s => s.tipo === 'proxima');
-  const cerradas = filtered.filter(s => s.tipo === 'cerrada');
+  const cerradas = filtered
+    .filter(s => s.tipo === 'cerrada')
+    .sort((a, b) => {
+      const dateTimeA = `${a.fecha}T${a.hora || '00:00:00'}`;
+      const dateTimeB = `${b.fecha}T${b.hora || '00:00:00'}`;
+      return dateTimeB.localeCompare(dateTimeA);
+    })
+    .slice(0, 5);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -168,7 +210,7 @@ export default function DashboardScreen() {
                   {proximas.map(s => (
                     <AuctionCard
                       key={s.id} s={s}
-                      onPress={() => router.push({ pathname: '/(buyer)/live-room', params: { id: s.id, name: s.descripcion, categoria: s.categoria } })}
+                      onPress={() => Alert.alert("Subasta no iniciada", "Esta subasta todavía no ha comenzado.")}
                       onCategoryPress={() => setModalCat(s.categoria)}
                     />
                   ))}

@@ -127,7 +127,7 @@ export default function MetricsScreen() {
               <>
                 {visible.map((item, index) => (
                   <TouchableOpacity
-                    key={item.subastaId}
+                    key={item.id ?? index}
                     style={[styles.historyItem, index === visible.length - 1 && !hasMore && { borderBottomWidth: 0 }]}
                     onPress={() => router.push({ pathname: '/(buyer)/closed-auction', params: { id: item.subastaId } })}
                     activeOpacity={0.7}

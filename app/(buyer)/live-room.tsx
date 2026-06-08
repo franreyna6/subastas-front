@@ -12,6 +12,7 @@ import { authStore } from '@/lib/store/authStore';
 import { subastasApi, ItemActual } from '@/lib/api/subastas.api';
 import { puedeParticipar, CATEGORIA_COLOR } from '@/lib/utils/categoria';
 import CategoryInfoModal from '@/components/CategoryInfoModal';
+import { BASE_URL } from '@/lib/api/apiClient';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const POLL_MS = 3000;
@@ -73,6 +74,7 @@ export default function LiveRoomScreen() {
   const [subastaEstado, setSubastaEstado] = useState<string>('abierta');
   const [totalItems, setTotalItems]       = useState(0);
   const [itemActual, setItemActual]       = useState<ItemActual | null>(null);
+  const [timeLeft, setTimeLeft]           = useState<number | null>(null);
 
   const [bidValue, setBidValue] = useState('');
   const [pujando, setPujando]   = useState(false);
@@ -110,6 +112,11 @@ export default function LiveRoomScreen() {
         prevItemId.current = res.data.itemActual?.itemId ?? null;
       }
       setItemActual(res.data.itemActual);
+      if (res.data.itemActual && res.data.itemActual.tiempoRestante !== undefined) {
+        setTimeLeft(res.data.itemActual.tiempoRestante);
+      } else {
+        setTimeLeft(null);
+      }
     }
     setLoading(false);
   }, [subastaId]);
@@ -120,11 +127,19 @@ export default function LiveRoomScreen() {
     return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
   }, [fetchEstado]);
 
+  useEffect(() => {
+    if (timeLeft === null || timeLeft <= 0) return;
+    const timer = setInterval(() => {
+      setTimeLeft(prev => (prev !== null && prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [timeLeft]);
+
   const categoriaEsSinLimites = ['oro', 'platino'].includes(categoriaSubasta.toLowerCase());
   const base    = itemActual?.precioBase ?? 0;
-  const mejor   = itemActual?.mejorOferta ?? base;
-  const minPuja = mejor + base * 0.01;
-  const maxPuja = mejor + base * 0.20;
+  const mejor   = itemActual?.mejorOferta;
+  const minPuja = mejor != null ? mejor + base * 0.01 : base;
+  const maxPuja = mejor != null ? mejor + base * 0.20 : base * 1.20;
 
   const handlePlaceBid = async () => {
     if (!itemActual) return;
@@ -205,7 +220,13 @@ export default function LiveRoomScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
         {/* Carrusel de imágenes */}
-        <Carousel images={PLACEHOLDER_IMAGES} />
+        <Carousel
+          images={
+            (itemActual?.imagenes && itemActual.imagenes.length > 0)
+              ? itemActual.imagenes.map(img => img.startsWith('http') ? img : `${BASE_URL}${img}`)
+              : PLACEHOLDER_IMAGES
+          }
+        />
 
         {/* Título e info del ítem */}
         <View style={styles.itemInfo}>
@@ -216,6 +237,18 @@ export default function LiveRoomScreen() {
             Pieza {itemActual.numero} de {totalItems}
           </Text>
         </View>
+
+        {/* Temporizador de cuenta regresiva */}
+        {timeLeft !== null && (
+          <View style={[styles.timerBox, timeLeft <= 15 && styles.timerBoxUrgent]}>
+            <Ionicons name="time-outline" size={20} color={timeLeft <= 15 ? '#EF4444' : '#FFD700'} />
+            <Text style={[styles.timerText, timeLeft <= 15 && styles.timerTextUrgent]}>
+              {timeLeft > 0 
+                ? `Cierre en: ${Math.floor(timeLeft / 60)}:${(timeLeft % 60).toString().padStart(2, '0')}`
+                : '¡VENDIDO! Procesando...'}
+            </Text>
+          </View>
+        )}
 
         {/* Precios */}
         <View style={styles.priceRow}>
@@ -363,6 +396,31 @@ const styles = StyleSheet.create({
   postorText:    { fontSize: 11, fontWeight: 'bold', color: '#fff' },
 
   scrollContent: { paddingBottom: 40 },
+  timerBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginHorizontal: Spacing.four,
+    marginTop: Spacing.two,
+    backgroundColor: '#121625',
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#3B82F6',
+  },
+  timerBoxUrgent: {
+    backgroundColor: 'rgba(239,68,68,0.1)',
+    borderColor: '#EF4444',
+  },
+  timerText: {
+    color: '#FFD700',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+  timerTextUrgent: {
+    color: '#EF4444',
+  },
 
   // Carrusel
   carouselImage: { width: SCREEN_W, height: 240, resizeMode: 'cover' },

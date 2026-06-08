@@ -2,8 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet, Text, View, TouchableOpacity, ScrollView,
   Alert, Modal, TextInput, ActivityIndicator,
-  KeyboardAvoidingView, Platform, RefreshControl,
+  KeyboardAvoidingView, Platform, RefreshControl, Image,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -34,6 +35,8 @@ export default function MyItemsScreen() {
   const [precioSugerido, setPrecioSugerido] = useState('');
   const [descripcion, setDescripcion]     = useState('');
   const [declaracion, setDeclaracion]     = useState(false);
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [fotosBase64, setFotosBase64]       = useState<string[]>([]);
 
   const cargar = useCallback(async () => {
     const res = await solicitudesApi.listar();
@@ -50,6 +53,72 @@ export default function MyItemsScreen() {
     setPrecioSugerido('');
     setDescripcion('');
     setDeclaracion(false);
+    setSelectedImages([]);
+    setFotosBase64([]);
+  };
+
+  const pickImages = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permissionResult.granted) {
+      Alert.alert('Permiso denegado', 'Necesitamos acceso a tu galería para subir fotos.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      selectionLimit: 6 - selectedImages.length,
+      quality: 0.5,
+      base64: true,
+    });
+
+    if (!result.canceled) {
+      const newImages = result.assets.map(asset => asset.uri);
+      const newBase64s = result.assets.map(asset => asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : '');
+      
+      setSelectedImages(prev => [...prev, ...newImages].slice(0, 6));
+      setFotosBase64(prev => [...prev, ...newBase64s].slice(0, 6));
+    }
+  };
+
+  const takePhotoWithCamera = async () => {
+    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permissionResult.granted) {
+      Alert.alert('Permiso denegado', 'Necesitamos acceso a tu cámara para sacar fotos.');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      quality: 0.5,
+      base64: true,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const asset = result.assets[0];
+      const newImage = asset.uri;
+      const newBase64 = asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : '';
+      
+      setSelectedImages(prev => [...prev, newImage].slice(0, 6));
+      setFotosBase64(prev => [...prev, newBase64].slice(0, 6));
+    }
+  };
+
+  const handleAddPhoto = () => {
+    if (selectedImages.length >= 6) {
+      Alert.alert('Límite alcanzado', 'Podés subir un máximo de 6 fotos.');
+      return;
+    }
+
+    Alert.alert(
+      'Agregar foto',
+      '¿De dónde querés obtener la foto del artículo?',
+      [
+        { text: 'Sacar foto (Cámara)', onPress: takePhotoWithCamera },
+        { text: 'Elegir de Galería', onPress: pickImages },
+        { text: 'Cancelar', style: 'cancel' }
+      ]
+    );
   };
 
   const handleEnviar = async () => {
@@ -59,6 +128,10 @@ export default function MyItemsScreen() {
     }
     if (!descripcion.trim()) {
       Alert.alert('Error', 'La descripción es obligatoria.');
+      return;
+    }
+    if (selectedImages.length < 5 || selectedImages.length > 6) {
+      Alert.alert('Error', 'Debés subir entre 5 y 6 fotos del artículo exactamente.');
       return;
     }
     if (!declaracion) {
@@ -74,6 +147,7 @@ export default function MyItemsScreen() {
       precioBaseSugerido: precioSugerido ? parseFloat(precioSugerido) : null,
       archivoComprobante: null,
       declaracionJurada: true,
+      fotosBase64,
     });
     setSubmitting(false);
 
@@ -274,6 +348,32 @@ export default function MyItemsScreen() {
                   onChangeText={setDescripcion}
                 />
 
+                <Text style={styles.inputLabel}>FOTOS DEL ARTÍCULO ({selectedImages.length} de 5 o 6 requeridas) *</Text>
+                <View style={styles.imagesContainer}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.imagesScroll}>
+                    {selectedImages.map((uri, idx) => (
+                      <View key={idx} style={styles.imageThumbnailWrapper}>
+                        <Image source={{ uri }} style={styles.imageThumbnail} />
+                        <TouchableOpacity
+                          style={styles.removeImageBtn}
+                          onPress={() => {
+                            setSelectedImages(prev => prev.filter((_, i) => i !== idx));
+                            setFotosBase64(prev => prev.filter((_, i) => i !== idx));
+                          }}
+                        >
+                          <Ionicons name="close" size={14} color="#fff" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                    {selectedImages.length < 6 && (
+                      <TouchableOpacity style={styles.addImageBtn} onPress={handleAddPhoto}>
+                        <Ionicons name="camera-outline" size={24} color={Colors.dark.textSecondary} />
+                        <Text style={styles.addImageText}>Agregar</Text>
+                      </TouchableOpacity>
+                    )}
+                  </ScrollView>
+                </View>
+
                 {/* Declaración jurada */}
                 <TouchableOpacity style={styles.checkRow} onPress={() => setDeclaracion(!declaracion)}>
                   <View style={[styles.checkbox, declaracion && styles.checkboxActive]}>
@@ -352,4 +452,11 @@ const styles = StyleSheet.create({
   checkLabel:     { flex: 1, fontSize: 12, color: Colors.dark.textSecondary, lineHeight: 18 },
   submitBtn:      { height: 52, backgroundColor: Colors.dark.primary, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginTop: Spacing.five },
   submitBtnText:  { color: '#FFFFFF', fontSize: 14, fontWeight: 'bold', letterSpacing: 1 },
+  imagesContainer: { marginVertical: Spacing.two },
+  imagesScroll:    { flexDirection: 'row', gap: Spacing.two, alignItems: 'center' },
+  imageThumbnailWrapper: { width: 80, height: 80, borderRadius: 8, overflow: 'hidden', position: 'relative' },
+  imageThumbnail:  { width: '100%', height: '100%', resizeMode: 'cover' },
+  removeImageBtn:  { position: 'absolute', top: 4, right: 4, backgroundColor: 'rgba(0,0,0,0.6)', width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  addImageBtn:     { width: 80, height: 80, borderRadius: 8, borderStyle: 'dashed', borderWidth: 1, borderColor: Colors.dark.textSecondary, justifyContent: 'center', alignItems: 'center', gap: 4 },
+  addImageText:    { fontSize: 10, color: Colors.dark.textSecondary, fontWeight: 'bold' },
 });

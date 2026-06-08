@@ -28,6 +28,7 @@ export interface CatalogoDetalle {
 }
 
 export interface HistorialItem {
+  id?: string;
   subastaId: number;
   descripcion: string;
   fecha: string;
@@ -72,6 +73,8 @@ export interface ItemActual {
   precioBase: number;
   mejorOferta: number | null;
   pujos: EstadoPujo[];
+  tiempoRestante?: number | null;
+  imagenes?: string[];
 }
 
 export interface EstadoSubasta {
@@ -114,6 +117,7 @@ export const solicitudesApi = {
                         precioBaseSugerido: number | null;
                         archivoComprobante: string | null;
                         declaracionJurada: boolean;
+                        fotosBase64?: string[];
                       })                          => api.post<SolicitudItem>('/api/solicitudes', body),
   aceptarCondiciones: (id: number)                => api.put(`/api/solicitudes/${id}/aceptar`),
   rechazarCondiciones:(id: number)                => api.put(`/api/solicitudes/${id}/rechazar-condiciones`),
