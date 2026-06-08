@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   StyleSheet, Text, View, TextInput, TouchableOpacity,
-  ScrollView, Alert, ActivityIndicator, Image, Dimensions,
-  NativeSyntheticEvent, NativeScrollEvent,
+  ScrollView, Alert, ActivityIndicator, Image, Dimensions, Modal,
+  NativeSyntheticEvent, NativeScrollEvent, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -78,10 +78,12 @@ export default function LiveRoomScreen() {
 
   const [bidValue, setBidValue] = useState('');
   const [pujando, setPujando]   = useState(false);
+  const [winInfo, setWinInfo]   = useState<{ titulo: string; importe: number } | null>(null);
 
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const prevItemId = useRef<number | null>(null);
-  const bloqueado  = userCategoria !== undefined && !puedeParticipar(userCategoria, categoriaSubasta);
+  const pollingRef    = useRef<ReturnType<typeof setInterval> | null>(null);
+  const prevItemId    = useRef<number | null>(null);
+  const prevItemPujos = useRef<{ numPostor: number; importe: number; ganador: boolean }[]>([]);
+  const bloqueado     = userCategoria !== undefined && !puedeParticipar(userCategoria, categoriaSubasta);
 
   useEffect(() => {
     authStore.get().then(s => setUserCategoria(s?.categoria));
@@ -106,12 +108,25 @@ export default function LiveRoomScreen() {
     if (res.data) {
       setSubastaEstado(res.data.estado);
       setTotalItems(res.data.totalItems);
-      // Limpiar input si cambió el item
-      if (res.data.itemActual?.itemId !== prevItemId.current) {
+
+      const newItemId = res.data.itemActual?.itemId ?? null;
+      if (newItemId !== prevItemId.current) {
+        // Detectar si ganamos el item anterior
+        if (prevItemId.current !== null && numeropostor !== null) {
+          const myWin = prevItemPujos.current.find(
+            p => p.numPostor === numeropostor && p.ganador
+          );
+          if (myWin) {
+            const titulo = itemActual?.descripcion ?? 'Artículo';
+            setWinInfo({ titulo, importe: myWin.importe });
+          }
+        }
         setBidValue('');
-        prevItemId.current = res.data.itemActual?.itemId ?? null;
+        prevItemId.current = newItemId;
       }
+      prevItemPujos.current = res.data.itemActual?.pujos ?? [];
       setItemActual(res.data.itemActual);
+
       if (res.data.itemActual && res.data.itemActual.tiempoRestante !== undefined) {
         setTimeLeft(res.data.itemActual.tiempoRestante);
       } else {
@@ -217,7 +232,8 @@ export default function LiveRoomScreen() {
         }
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
         {/* Carrusel de imágenes */}
         <Carousel
@@ -358,6 +374,7 @@ export default function LiveRoomScreen() {
         </TouchableOpacity>
 
       </ScrollView>
+      </KeyboardAvoidingView>
 
       {showCatModal && userCategoria && (
         <CategoryInfoModal
@@ -366,6 +383,24 @@ export default function LiveRoomScreen() {
           onClose={() => setShowCatModal(false)}
         />
       )}
+
+      {/* Popup de victoria */}
+      <Modal visible={winInfo !== null} transparent animationType="fade">
+        <View style={styles.winBackdrop}>
+          <View style={styles.winCard}>
+            <Ionicons name="trophy" size={52} color="#FFD700" />
+            <Text style={styles.winTitle}>¡Ganaste!</Text>
+            <Text style={styles.winItemName}>{winInfo?.titulo}</Text>
+            <Text style={styles.winImporte}>${winInfo?.importe.toLocaleString('es-AR')}</Text>
+            <Text style={styles.winNote}>
+              Tenés 72 horas para completar el pago desde tu perfil.
+            </Text>
+            <TouchableOpacity style={styles.winBtn} onPress={() => setWinInfo(null)}>
+              <Text style={styles.winBtnText}>CONTINUAR</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -468,4 +503,14 @@ const styles = StyleSheet.create({
   // VER EN VIVO
   liveBtn:       { marginHorizontal: Spacing.four, marginTop: 24, height: 52, backgroundColor: Colors.dark.primary, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
   liveBtnText:   { color: '#fff', fontSize: 16, fontWeight: 'bold', letterSpacing: 1.5 },
+
+  // Popup de victoria
+  winBackdrop:   { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: Spacing.five },
+  winCard:       { width: '100%', backgroundColor: Colors.dark.backgroundElement, borderRadius: 24, padding: Spacing.five, alignItems: 'center', gap: 12, borderWidth: 1, borderColor: 'rgba(255,215,0,0.3)' },
+  winTitle:      { fontSize: 32, fontWeight: 'bold', color: '#FFD700' },
+  winItemName:   { fontSize: 16, color: '#fff', textAlign: 'center', fontWeight: '600' },
+  winImporte:    { fontSize: 28, fontWeight: 'bold', color: '#fff' },
+  winNote:       { fontSize: 13, color: Colors.dark.textSecondary, textAlign: 'center', lineHeight: 20 },
+  winBtn:        { marginTop: 8, width: '100%', height: 52, backgroundColor: Colors.dark.primary, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  winBtnText:    { color: '#fff', fontWeight: 'bold', fontSize: 15, letterSpacing: 1 },
 });

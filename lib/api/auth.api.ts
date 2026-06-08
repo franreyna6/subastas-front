@@ -21,14 +21,6 @@ export const authApi = {
     return api.post<{ mensaje: string; userId: number }>('/api/auth/register', data);
   },
 
-  async socialLogin(email: string) {
-    const result = await api.post<AuthSession>('/api/auth/social-login', { email });
-    if (result.data) {
-      await authStore.save(result.data);
-    }
-    return result;
-  },
-
   async logout() {
     await authStore.clear();
   },

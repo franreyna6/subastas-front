@@ -1,10 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
-// Dispositivo físico → IP local de la máquina de desarrollo (actualizada a localtunnel estable)
 const BASE_URL = Platform.select({
-  android: 'https://subastas-back-reyna.loca.lt',
-  default: 'https://subastas-back-reyna.loca.lt',
+  android: 'http://192.168.1.9:8080',
+  default: 'http://192.168.1.9:8080',
 });
 
 export { BASE_URL };
@@ -17,7 +16,6 @@ async function request<T>(
     const token = await AsyncStorage.getItem('auth_token');
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'Bypass-Tunnel-Reminder': 'true', // Evita la pantalla de advertencia de localtunnel
       ...(options.headers as Record<string, string>),
     };
     if (token) headers['Authorization'] = `Bearer ${token}`;

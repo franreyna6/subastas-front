@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -44,7 +44,8 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.logoContainer}>
           <View style={styles.iconBackground}>
             <Ionicons name="hammer-sharp" size={48} color={Colors.dark.primary} />
@@ -102,14 +103,15 @@ export default function LoginScreen() {
             <Text style={styles.linkText}>Olvidé mi contraseña</Text>
           </TouchableOpacity>
         </View>
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container:     { flex: 1, backgroundColor: Colors.dark.background },
-  content:       { flex: 1, paddingHorizontal: Spacing.five, justifyContent: 'center', alignItems: 'center' },
+  content:       { flexGrow: 1, paddingHorizontal: Spacing.five, justifyContent: 'center', alignItems: 'center', paddingVertical: Spacing.six },
   logoContainer: { alignItems: 'center', marginBottom: Spacing.six },
   iconBackground:{ width: 90, height: 90, borderRadius: 45, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.three },
   logoText:      { fontSize: 28, fontWeight: 'bold', color: Colors.dark.primary, letterSpacing: 2 },
