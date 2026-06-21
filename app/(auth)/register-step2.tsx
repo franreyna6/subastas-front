@@ -9,22 +9,16 @@ import { registrationStore } from '@/lib/store/registrationStore';
 
 export default function RegisterStep2Screen() {
   const router = useRouter();
+  const [codigo, setCodigo] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    // Bypass: si ambos campos vacíos → modo prueba
-    if (!password.trim() && !confirmPassword.trim()) {
-      registrationStore.clear();
-      Alert.alert(
-        'Registro Simulado',
-        'Registro completado en modo de prueba.',
-        [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }],
-      );
+    if (!codigo.trim()) {
+      Alert.alert('Error', 'Ingresá el código de validación de 6 dígitos.');
       return;
     }
-
     if (password.length < 6) {
       Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres.');
       return;
@@ -34,33 +28,21 @@ export default function RegisterStep2Screen() {
       return;
     }
 
-    const regData = registrationStore.get();
-    if (!regData.email || !regData.nombre || !regData.dni) {
-      Alert.alert('Error', 'Faltan datos del registro. Volvé al inicio.');
-      router.replace('/(auth)/register-step0');
-      return;
-    }
-
     setLoading(true);
-    const { error } = await authApi.register({
-      nombre: `${regData.nombre} ${regData.apellido ?? ''}`.trim(),
-      documento: regData.dni,
-      direccion: regData.address,
-      email: regData.email,
+    const { error } = await authApi.completeRegistration({
+      codigo: codigo.trim(),
       password,
-      rol: 'cliente',
     });
     setLoading(false);
 
     if (error) {
-      Alert.alert('Error al registrarse', error);
+      Alert.alert('Error al completar registro', error);
       return;
     }
 
-    registrationStore.clear();
     Alert.alert(
-      '¡Registro enviado!',
-      'Tu solicitud fue recibida. Un empleado debe aprobarla antes de que puedas ingresar.',
+      '¡Registro completado!',
+      'Tu cuenta fue creada con éxito. Ahora un administrador la activará definitivamente para que puedas ingresar.',
       [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }],
     );
   };
@@ -82,11 +64,24 @@ export default function RegisterStep2Screen() {
           <View style={[styles.stepPill, { backgroundColor: Colors.dark.primary }]} />
         </View>
 
-        <Text style={styles.stepTitle}>PASO 3 - CREACIÓN DE CLAVE</Text>
+        <Text style={styles.stepTitle}>COMPLETAR REGISTRO (CÓDIGO RECIBIDO)</Text>
 
         <View style={styles.form}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>CONTRASEÑA PERSONAL</Text>
+            <Text style={styles.label}>CÓDIGO DE VALIDACIÓN (6 DÍGITOS)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="123456"
+              placeholderTextColor={Colors.dark.textSecondary}
+              value={codigo}
+              onChangeText={setCodigo}
+              keyboardType="numeric"
+              maxLength={6}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>NUEVA CONTRASEÑA</Text>
             <TextInput
               style={styles.input}
               placeholder="••••••••"
@@ -115,7 +110,7 @@ export default function RegisterStep2Screen() {
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.buttonText}>FINALIZAR REGISTRO</Text>
+              <Text style={styles.buttonText}>COMPLETAR REGISTRO</Text>
             )}
           </TouchableOpacity>
         </View>

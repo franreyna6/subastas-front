@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   StyleSheet, Text, TextInput, TouchableOpacity,
   View, ScrollView, Image, Alert, KeyboardAvoidingView, Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -9,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors, Spacing } from '@/constants/theme';
 import { registrationStore } from '@/lib/store/registrationStore';
+import { authApi } from '@/lib/api/auth.api';
 
 async function pickFromCamera(onUri: (uri: string) => void) {
   const { granted } = await ImagePicker.requestCameraPermissionsAsync();
@@ -65,14 +67,26 @@ function PhotoSlot({ label, uri, onCamera, onGallery }: {
   );
 }
 
+const uriToBase64 = async (uri: string): Promise<string> => {
+  const response = await fetch(uri);
+  const blob = await response.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
+
 export default function RegisterStep1Screen() {
   const router = useRouter();
   const [address, setAddress] = useState('');
   const [country, setCountry] = useState('Argentina');
   const [fotoFrente, setFotoFrente] = useState<string | null>(null);
   const [fotoDorso, setFotoDorso] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!address.trim() || !country.trim()) {
       Alert.alert('Campos requeridos', 'Completá domicilio y país.');
       return;
@@ -81,8 +95,48 @@ export default function RegisterStep1Screen() {
       Alert.alert('Fotos requeridas', 'Subí la foto del frente y dorso de tu DNI.');
       return;
     }
-    registrationStore.set({ address, country, fotoDniFrente: fotoFrente, fotoDniDorso: fotoDorso });
-    router.push('/(auth)/register-step2');
+
+    const regData = registrationStore.get();
+    if (!regData.email || !regData.nombre || !regData.dni) {
+      Alert.alert('Error', 'Faltan datos del registro. Volvé al inicio.');
+      router.replace('/(auth)/register-step0');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const frenteBase64 = await uriToBase64(fotoFrente);
+      const dorsoBase64 = await uriToBase64(fotoDorso);
+
+      const { error } = await authApi.preRegister({
+        nombre: `${regData.nombre} ${regData.apellido ?? ''}`.trim(),
+        documento: regData.dni,
+        direccion: address,
+        telefono: regData.telefono,
+        pais: 1, // Argentina
+        email: regData.email,
+        rol: 'cliente',
+        fotoFrenteBase64: frenteBase64,
+        fotoDorsoBase64: dorsoBase64,
+      });
+
+      setLoading(false);
+
+      if (error) {
+        Alert.alert('Error al registrarse', error);
+        return;
+      }
+
+      registrationStore.clear();
+      Alert.alert(
+        '¡Pre-registro enviado!',
+        'Tus datos y DNI fueron cargados. Un administrador revisará la información y te enviará un código de validación por correo electrónico.',
+        [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }]
+      );
+    } catch (err: any) {
+      setLoading(false);
+      Alert.alert('Error', 'No se pudo procesar la solicitud: ' + err.message);
+    }
   };
 
   return (
@@ -147,8 +201,12 @@ export default function RegisterStep1Screen() {
             Las fotos son verificadas por la empresa antes de aprobar tu cuenta.
           </Text>
 
-          <TouchableOpacity style={styles.button} onPress={handleContinue}>
-            <Text style={styles.buttonText}>CONTINUAR</Text>
+          <TouchableOpacity style={styles.button} onPress={handleContinue} disabled={loading}>
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.buttonText}>ENVIAR SOLICITUD</Text>
+            )}
           </TouchableOpacity>
         </View>
         </ScrollView>

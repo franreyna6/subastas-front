@@ -38,6 +38,11 @@ export default function MyItemsScreen() {
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [fotosBase64, setFotosBase64]       = useState<string[]>([]);
 
+  // Seguro Modal
+  const [isSeguroModalOpen, setIsSeguroModalOpen] = useState(false);
+  const [selectedItemIdForSeguro, setSelectedItemIdForSeguro] = useState<number | null>(null);
+  const [nuevoImporteSeguro, setNuevoImporteSeguro] = useState('');
+
   const cargar = useCallback(async () => {
     const res = await solicitudesApi.listar();
     if (res.data) setItems(res.data);
@@ -162,6 +167,30 @@ export default function MyItemsScreen() {
     cargar();
   };
 
+  const handleAumentarSeguro = async () => {
+    if (selectedItemIdForSeguro === null) return;
+    const value = parseFloat(nuevoImporteSeguro.replace(/[^0-9.]/g, ''));
+    if (isNaN(value) || value <= 0) {
+      Alert.alert('Error', 'Ingresá un monto de póliza válido.');
+      return;
+    }
+
+    setSubmitting(true);
+    const res = await solicitudesApi.aumentarSeguro(selectedItemIdForSeguro, value);
+    setSubmitting(false);
+
+    if (res.error) {
+      Alert.alert('Error', res.error);
+      return;
+    }
+
+    setIsSeguroModalOpen(false);
+    setNuevoImporteSeguro('');
+    setSelectedItemIdForSeguro(null);
+    Alert.alert('Póliza actualizada', 'El valor asegurado del bien fue aumentado correctamente.');
+    cargar();
+  };
+
   const handleAceptar = (item: SolicitudItem) => {
     Alert.alert(
       'Aceptar condiciones',
@@ -236,6 +265,40 @@ export default function MyItemsScreen() {
             </View>
           </View>
         )}
+
+        {/* Ubicación del artículo (Logística) */}
+        {item.estado !== 'pendiente' && item.estado !== 'rechazado_empresa' && item.ubicacion ? (
+          <View style={styles.logisticaBox}>
+            <Ionicons name="location-outline" size={16} color={Colors.dark.primary} />
+            <Text style={styles.logisticaText} numberOfLines={2}>
+              <Text style={{ fontWeight: 'bold', color: '#fff' }}>Ubicación: </Text>
+              {item.ubicacion}
+            </Text>
+          </View>
+        ) : null}
+
+        {/* Seguro Contratado */}
+        {item.seguro ? (
+          <View style={styles.seguroBox}>
+            <View style={styles.seguroHeader}>
+              <Ionicons name="shield-checkmark-outline" size={16} color={Colors.dark.success} />
+              <Text style={styles.seguroTitle}>SEGURO CONTRATADO</Text>
+            </View>
+            <Text style={styles.seguroText}>Póliza: {item.seguro.nropoliza} ({item.seguro.compania})</Text>
+            <Text style={styles.seguroText}>Valor Asegurado: ${item.seguro.importe.toLocaleString('es-AR')}</Text>
+
+            <TouchableOpacity
+              style={styles.aumentarSeguroBtn}
+              onPress={() => {
+                setSelectedItemIdForSeguro(item.id);
+                setNuevoImporteSeguro(item.seguro!.importe.toString());
+                setIsSeguroModalOpen(true);
+              }}
+            >
+              <Text style={styles.aumentarSeguroBtnText}>AUMENTAR VALOR DE LA PÓLIZA</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         {/* Motivo de rechazo */}
         {item.estado === 'rechazado_empresa' && item.motivoRechazo ? (
@@ -398,6 +461,46 @@ export default function MyItemsScreen() {
           </KeyboardAvoidingView>
         </View>
       </Modal>
+
+      {/* Modal Aumentar Seguro */}
+      <Modal visible={isSeguroModalOpen} animationType="slide" transparent onRequestClose={() => setIsSeguroModalOpen(false)}>
+        <View style={styles.backdrop}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ width: '100%' }}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Aumentar Cobertura del Seguro</Text>
+                <TouchableOpacity onPress={() => setIsSeguroModalOpen(false)}>
+                  <Ionicons name="close" size={24} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.hint}>
+                Podés aumentar el valor de la póliza contratada. La diferencia del premio se cobrará utilizando tus medios de pago.
+              </Text>
+
+              <Text style={styles.inputLabel}>NUEVO VALOR ASEGURADO TOTAL ($) *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Ej: 500000"
+                placeholderTextColor={Colors.dark.textSecondary}
+                keyboardType="numeric"
+                value={nuevoImporteSeguro}
+                onChangeText={setNuevoImporteSeguro}
+              />
+
+              <TouchableOpacity
+                style={[styles.submitBtn, submitting && { opacity: 0.6 }]}
+                onPress={handleAumentarSeguro}
+                disabled={submitting}
+              >
+                {submitting
+                  ? <ActivityIndicator color="#fff" />
+                  : <Text style={styles.submitBtnText}>CONFIRMAR Y PAGAR DIFERENCIA</Text>}
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -459,4 +562,12 @@ const styles = StyleSheet.create({
   removeImageBtn:  { position: 'absolute', top: 4, right: 4, backgroundColor: 'rgba(0,0,0,0.6)', width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
   addImageBtn:     { width: 80, height: 80, borderRadius: 8, borderStyle: 'dashed', borderWidth: 1, borderColor: Colors.dark.textSecondary, justifyContent: 'center', alignItems: 'center', gap: 4 },
   addImageText:    { fontSize: 10, color: Colors.dark.textSecondary, fontWeight: 'bold' },
+  logisticaBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#101626', padding: Spacing.three, borderRadius: 8, marginTop: 4 },
+  logisticaText: { fontSize: 12, color: Colors.dark.textSecondary, flex: 1 },
+  seguroBox: { backgroundColor: '#151C30', padding: Spacing.four, borderRadius: 10, gap: 6, marginTop: 8, borderWidth: 1, borderColor: '#233052' },
+  seguroHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  seguroTitle: { fontSize: 11, fontWeight: 'bold', color: Colors.dark.success, letterSpacing: 1 },
+  seguroText: { fontSize: 13, color: '#fff' },
+  aumentarSeguroBtn: { height: 36, backgroundColor: Colors.dark.primary, borderRadius: 6, justifyContent: 'center', alignItems: 'center', marginTop: 6 },
+  aumentarSeguroBtnText: { color: '#fff', fontSize: 11, fontWeight: 'bold', letterSpacing: 0.5 },
 });

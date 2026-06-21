@@ -95,6 +95,12 @@ export interface SolicitudItem {
   comision: number | null;
   motivoRechazo: string;
   fechaSolicitud: string;
+  ubicacion?: string;
+  seguro?: {
+    nropoliza: string;
+    compania: string;
+    importe: number;
+  } | null;
 }
 
 export const subastasApi = {
@@ -121,4 +127,5 @@ export const solicitudesApi = {
                       })                          => api.post<SolicitudItem>('/api/solicitudes', body),
   aceptarCondiciones: (id: number)                => api.put(`/api/solicitudes/${id}/aceptar`),
   rechazarCondiciones:(id: number)                => api.put(`/api/solicitudes/${id}/rechazar-condiciones`),
+  aumentarSeguro:     (id: number, nuevoImporte: number) => api.put(`/api/solicitudes/${id}/seguro/aumentar`, { nuevoImporte }),
 };
