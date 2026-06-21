@@ -56,8 +56,12 @@ export default function PaymentsScreen() {
       setIsPrueba(true);
       setPagos(MOCK_PAGOS);
     } else {
-      const { data } = await pagosApi.listar();
-      if (data) setPagos(data);
+      const { data, error } = await pagosApi.listar();
+      if (error) {
+        Alert.alert('Error al cargar pagos', error);
+      } else if (data) {
+        setPagos(data);
+      }
     }
     setLoading(false);
   }, []);
