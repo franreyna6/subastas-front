@@ -47,7 +47,7 @@ export default function ProfileScreen() {
       setTotalPagos(MOCK_PAGOS.length);
     } else {
       const [meRes, pagosRes, statsRes] = await Promise.all([
-        api.get<Perfil>('/api/auth/me'),
+        authApi.me(),
         pagosApi.listar(),
         api.get<Stats>('/api/perfil/stats'),
       ]);

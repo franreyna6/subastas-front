@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '@/constants/theme';
 import { subastasApi, SubastaResumen } from '@/lib/api/subastas.api';
 import { authStore } from '@/lib/store/authStore';
+import { authApi } from '@/lib/api/auth.api';
 import { MOCK_SUBASTAS } from '@/lib/mock/mockData';
 import { CATEGORIA_COLOR, CATEGORIA_ICON } from '@/lib/utils/categoria';
 import CategoryInfoModal from '@/components/CategoryInfoModal';
@@ -106,7 +107,14 @@ export default function DashboardScreen() {
     if (authStore.isPrueba(sesion)) {
       setSubastas(MOCK_SUBASTAS);
     } else {
-      const res = await subastasApi.listar();
+      const [meRes, res] = await Promise.all([
+        authApi.me(),
+        subastasApi.listar(),
+      ]);
+      if (meRes.data) {
+        setNombre(meRes.data.nombre?.split(' ')[0] ?? '');
+        setCategoria(meRes.data.categoria ?? '');
+      }
       if (res.data) {
         setSubastas(res.data);
       }

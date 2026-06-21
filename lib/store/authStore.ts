@@ -29,6 +29,14 @@ export const authStore = {
     return raw ? JSON.parse(raw) : null;
   },
 
+  async updateProfile(profile: Partial<Omit<AuthSession, 'token'>>) {
+    const current = await this.get();
+    if (current) {
+      const updated = { ...current, ...profile };
+      await AsyncStorage.setItem('auth_session', JSON.stringify(updated));
+    }
+  },
+
   async clear() {
     await AsyncStorage.removeItem('auth_token');
     await AsyncStorage.removeItem('auth_session');

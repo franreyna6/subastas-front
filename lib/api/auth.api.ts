@@ -42,6 +42,23 @@ export const authApi = {
     return api.post<{ mensaje: string; userId: number }>('/api/auth/complete-registration', data);
   },
 
+  async me() {
+    const result = await api.get<{
+      nombre: string;
+      email: string;
+      categoria: string | null;
+      rol: 'cliente' | 'duenio';
+      userId: number;
+    }>('/api/auth/me');
+    if (result.data) {
+      await authStore.updateProfile({
+        nombre: result.data.nombre,
+        categoria: result.data.categoria ?? undefined,
+      });
+    }
+    return result;
+  },
+
   async logout() {
     await authStore.clear();
   },
