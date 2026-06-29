@@ -249,6 +249,11 @@ export default function LiveRoomScreen() {
           <Text style={styles.itemTitle} numberOfLines={2}>
             {itemActual.descripcion || `Ítem #${itemActual.itemId}`}
           </Text>
+          {!!itemActual.detalleDescripcion && (
+            <Text style={styles.itemDescription} numberOfLines={3}>
+              {itemActual.detalleDescripcion}
+            </Text>
+          )}
           <Text style={styles.itemMeta}>
             Pieza {itemActual.numero} de {totalItems}
           </Text>
@@ -464,9 +469,10 @@ const styles = StyleSheet.create({
   dotActive:     { backgroundColor: '#fff', width: 18 },
 
   // Info item
-  itemInfo:      { paddingHorizontal: Spacing.four, paddingTop: Spacing.three, paddingBottom: Spacing.two },
-  itemTitle:     { fontSize: 20, fontWeight: 'bold', color: '#fff', lineHeight: 26 },
-  itemMeta:      { fontSize: 13, color: Colors.dark.textSecondary, marginTop: 4 },
+  itemInfo:        { paddingHorizontal: Spacing.four, paddingTop: Spacing.three, paddingBottom: Spacing.two },
+  itemTitle:       { fontSize: 20, fontWeight: 'bold', color: '#fff', lineHeight: 26 },
+  itemDescription: { fontSize: 13, color: Colors.dark.textSecondary, marginTop: 6, lineHeight: 18 },
+  itemMeta:        { fontSize: 13, color: Colors.dark.textSecondary, marginTop: 4 },
 
   // Precios
   priceRow:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: Spacing.four, marginTop: Spacing.two },

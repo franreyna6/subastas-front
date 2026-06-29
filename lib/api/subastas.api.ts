@@ -70,6 +70,7 @@ export interface ItemActual {
   itemId: number;
   numero: number;
   descripcion: string;
+  detalleDescripcion?: string;
   precioBase: number;
   mejorOferta: number | null;
   pujos: EstadoPujo[];
