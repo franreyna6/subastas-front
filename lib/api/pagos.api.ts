@@ -16,4 +16,7 @@ export const pagosApi = {
     api.post<MetodoPago>('/api/pagos', { tipo, detalle }),
 
   eliminar: (id: number) => api.delete<{ mensaje: string }>(`/api/pagos/${id}`),
+
+  pagarMulta: (multaId: number, metodoPagoId: number) =>
+    api.post<{ mensaje: string }>(`/api/perfil/multas/${multaId}/pagar`, { metodoPagoId }),
 };
