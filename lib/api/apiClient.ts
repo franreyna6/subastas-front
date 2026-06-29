@@ -2,8 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
 const BASE_URL = Platform.select({
-  android: 'https://subastas-back.onrender.com',
-  default: 'https://subastas-back.onrender.com',
+  android: 'http://192.168.0.107:8080',
+  default: 'http://192.168.0.107:8080',
 });
 
 export { BASE_URL };
